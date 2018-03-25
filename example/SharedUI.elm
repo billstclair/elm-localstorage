@@ -19,9 +19,9 @@ import LocalStorage exposing (LocalStorage, clear, getItem, setItem, setPorts)
 import LocalStorage.SharedTypes exposing (Key, Operation, Ports, Value)
 
 
-type alias Model state =
+type alias Model =
     { hello : String
-    , storage : LocalStorage state (Msg state)
+    , storage : LocalStorage Msg
     }
 
 
@@ -30,14 +30,14 @@ prefix =
     "example"
 
 
-type Msg state
+type Msg
     = Hello String
-    | UpdatePorts Operation (Ports state (Msg state)) Key Value
+    | UpdatePorts Operation (Ports Msg) Key Value
 
 
 {-| Still need to decode `initialModel`
 -}
-init : Value -> Ports state (Msg state) -> ( Model state, Cmd (Msg state) )
+init : Value -> Ports Msg -> ( Model, Cmd Msg )
 init initialModel ports =
     { hello = "Hello, World!"
     , storage = LocalStorage.make ports prefix
@@ -45,7 +45,7 @@ init initialModel ports =
         ! []
 
 
-update : Msg state -> Model state -> ( Model state, Cmd (Msg state) )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UpdatePorts operation ports key value ->
@@ -55,7 +55,7 @@ update msg model =
             { model | hello = msg } ! []
 
 
-view : Model state -> Html (Msg state)
+view : Model -> Html Msg
 view model =
     div []
         [ h2 [] [ text "LocalStorage Example: " ]

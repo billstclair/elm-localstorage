@@ -14,7 +14,7 @@ module ReactorExample exposing (..)
 
 import Html
 import Json.Encode as JE
-import LocalStorage.DictPorts as DictPorts exposing (DictPorts, DictState)
+import LocalStorage.DictPorts as DictPorts exposing (DictPorts)
 import LocalStorage.SharedTypes exposing (Key, Operation, Ports, Value)
 import SharedUI exposing (Model, Msg(..), init, update, view)
 import Task
@@ -29,13 +29,13 @@ main =
         }
 
 
-wrapper : Operation -> DictPorts (Msg DictState) -> Key -> Value -> Cmd (Msg DictState)
+wrapper : Operation -> DictPorts Msg -> Key -> Value -> Cmd Msg
 wrapper operation ports key value =
     UpdatePorts operation ports key value
         |> Task.succeed
         |> Task.perform identity
 
 
-ports : DictPorts (Msg DictState)
+ports : DictPorts Msg
 ports =
     DictPorts.make wrapper

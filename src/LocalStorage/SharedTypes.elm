@@ -10,8 +10,17 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.SharedTypes exposing (Key, Operation(..), Ports(..), Value)
+module LocalStorage.SharedTypes
+    exposing
+        ( DictState
+        , Key
+        , Operation(..)
+        , Ports(..)
+        , Value
+        , emptyDictState
+        )
 
+import Dict exposing (Dict)
 import Json.Encode
 
 
@@ -23,16 +32,25 @@ type alias Value =
     Json.Encode.Value
 
 
+type alias DictState =
+    Dict Key Value
+
+
+emptyDictState : DictState
+emptyDictState =
+    Dict.empty
+
+
 type Operation
     = GetItemOperation
     | SetItemOperation
     | ClearOperation
 
 
-type Ports state msg
+type Ports msg
     = Ports
-        { getItem : Ports state msg -> String -> Key -> Cmd msg
-        , setItem : Ports state msg -> String -> Key -> Value -> Cmd msg
-        , clear : Ports state msg -> String -> Cmd msg
-        , state : state
+        { getItem : Ports msg -> String -> Key -> Cmd msg
+        , setItem : Ports msg -> String -> Key -> Value -> Cmd msg
+        , clear : Ports msg -> String -> Cmd msg
+        , state : DictState
         }

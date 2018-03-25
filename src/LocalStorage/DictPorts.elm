@@ -10,19 +10,23 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.DictPorts exposing (CmdWrapper, DictPorts, DictState, make)
+module LocalStorage.DictPorts exposing (CmdWrapper, DictPorts, make)
 
 import Dict exposing (Dict)
 import Json.Encode as JE
-import LocalStorage.SharedTypes exposing (Key, Operation(..), Ports(..), Value)
-
-
-type alias DictState =
-    Dict Key Value
+import LocalStorage.SharedTypes
+    exposing
+        ( DictState
+        , Key
+        , Operation(..)
+        , Ports(..)
+        , Value
+        , emptyDictState
+        )
 
 
 type alias DictPorts msg =
-    Ports DictState msg
+    Ports msg
 
 
 type alias CmdWrapper msg =
@@ -35,7 +39,7 @@ make wrapper =
         { getItem = getItem wrapper
         , setItem = setItem wrapper
         , clear = clear wrapper
-        , state = Dict.empty
+        , state = emptyDictState
         }
 
 
