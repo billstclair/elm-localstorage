@@ -13,8 +13,8 @@
 module SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
 
 import Debug exposing (log)
-import Html exposing (Html, button, div, h2, input, p, table, td, text, tr)
-import Html.Attributes exposing (style, type_, value)
+import Html exposing (Html, a, button, div, h2, input, p, span, table, td, text, tr)
+import Html.Attributes exposing (href, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as JD
 import Json.Encode as JE
@@ -54,7 +54,7 @@ type Msg
 init : Value -> Ports Msg -> ( Model, Cmd Msg )
 init initialModel ports =
     { key = "key"
-    , value = "value"
+    , value = ""
     , storage = LocalStorage.make ports prefix
     }
         ! []
@@ -135,10 +135,16 @@ b string =
     Html.b [] [ text string ]
 
 
+ps : List (Html msg) -> Html msg
+ps paragraphs =
+    List.map (\para -> p [] [ para ]) paragraphs
+        |> div []
+
+
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [] [ text "LocalStorage Example: " ]
+        [ h2 [] [ text "LocalStorage Example" ]
         , p []
             [ table []
                 [ tr []
@@ -175,5 +181,21 @@ view model =
                         ]
                     ]
                 ]
+            ]
+        , ps
+            [ span []
+                [ text "This is an example of the "
+                , a [ href "http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest" ]
+                    [ text "billstclair/localstorage" ]
+                , text " Elm package."
+                ]
+            , span []
+                [ text "Enter a key and press 'Get' to fetch its value."
+                , text " Enter a key and value and press 'Set' to set its value."
+                , text " Enter a key and press 'Remove' to remove that value."
+                , text " Press 'Clear' to remove all values."
+                ]
+            , a [ href "https:/github.com/billstclair/elm-localstorage" ]
+                [ text "Source at GitHub" ]
             ]
         ]
