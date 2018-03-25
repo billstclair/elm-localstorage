@@ -103,7 +103,7 @@ type alias ClearPort msg =
     String -> Cmd msg
 
 
-{-| The required signature of your subscription to received `getItem` values.
+{-| The required signature of your subscription to receive `getItem` values.
 -}
 type alias ReceiveItemPort msg =
     (( Key, Value ) -> msg) -> Sub msg
