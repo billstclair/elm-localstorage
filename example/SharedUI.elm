@@ -195,7 +195,7 @@ view model =
                 , text " Enter a key and press 'Remove' to remove that value."
                 , text " Press 'Clear' to remove all values."
                 ]
-            , a [ href "https:/github.com/billstclair/elm-localstorage" ]
+            , a [ href "https://github.com/billstclair/elm-localstorage" ]
                 [ text "Source at GitHub" ]
             ]
         ]
