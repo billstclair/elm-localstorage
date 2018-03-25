@@ -29,9 +29,9 @@ main =
         }
 
 
-wrapper : Operation -> DictPorts (Msg DictState) -> ( Key, Value ) -> Cmd (Msg DictState)
-wrapper operation ports kvpair =
-    UpdatePorts operation ports kvpair
+wrapper : Operation -> DictPorts (Msg DictState) -> Key -> Value -> Cmd (Msg DictState)
+wrapper operation ports key value =
+    UpdatePorts operation ports key value
         |> Task.succeed
         |> Task.perform identity
 

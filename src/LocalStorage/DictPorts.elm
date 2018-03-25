@@ -26,7 +26,7 @@ type alias DictPorts msg =
 
 
 type alias CmdWrapper msg =
-    Operation -> DictPorts msg -> ( Key, Value ) -> Cmd msg
+    Operation -> DictPorts msg -> Key -> Value -> Cmd msg
 
 
 make : CmdWrapper msg -> DictPorts msg
@@ -52,7 +52,7 @@ getItem wrapper ports prefix key =
                         Just value ->
                             value
             in
-            wrapper GetItemOperation ports ( key, value )
+            wrapper GetItemOperation ports key value
 
 
 setItem : CmdWrapper msg -> DictPorts msg -> String -> Key -> Value -> Cmd msg
@@ -66,7 +66,7 @@ setItem wrapper ports prefix key value =
                 newPorts =
                     Ports { p | state = dict }
             in
-            wrapper SetItemOperation newPorts ( key, value )
+            wrapper SetItemOperation newPorts key value
 
 
 clear : CmdWrapper msg -> DictPorts msg -> String -> Cmd msg
@@ -77,4 +77,4 @@ clear wrapper ports prefix =
                 newPorts =
                     Ports { p | state = Dict.empty }
             in
-            wrapper ClearOperation newPorts ( "", JE.null )
+            wrapper ClearOperation newPorts "" JE.null

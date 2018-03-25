@@ -32,7 +32,7 @@ prefix =
 
 type Msg state
     = Hello String
-    | UpdatePorts Operation (Ports state (Msg state)) ( Key, Value )
+    | UpdatePorts Operation (Ports state (Msg state)) Key Value
 
 
 {-| Still need to decode `initialModel`
@@ -48,7 +48,7 @@ init initialModel ports =
 update : Msg state -> Model state -> ( Model state, Cmd (Msg state) )
 update msg model =
     case msg of
-        UpdatePorts operation ports kvpair ->
+        UpdatePorts operation ports key value ->
             { model | storage = setPorts ports model.storage } ! []
 
         Hello msg ->

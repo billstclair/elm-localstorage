@@ -59,8 +59,8 @@ getItem (LocalStorage ( ports, prefix )) key =
             p.getItem ports prefix key
 
 
-setItem : LocalStorage state msg -> ( Key, Value ) -> Cmd msg
-setItem (LocalStorage ( ports, prefix )) ( key, value ) =
+setItem : LocalStorage state msg -> Key -> Value -> Cmd msg
+setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
         Ports p ->
             p.setItem ports prefix key value
