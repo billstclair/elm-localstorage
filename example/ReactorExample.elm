@@ -29,13 +29,6 @@ main =
         }
 
 
-wrapper : Operation -> Maybe (Ports Msg) -> Key -> Value -> Cmd Msg
-wrapper operation ports key value =
-    UpdatePorts operation ports key value
-        |> Task.succeed
-        |> Task.perform identity
-
-
 ports : Ports Msg
 ports =
-    DictPorts.make wrapper
+    DictPorts.make UpdatePorts

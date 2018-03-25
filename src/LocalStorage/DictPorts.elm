@@ -10,7 +10,10 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.DictPorts exposing (CmdWrapper, make)
+module LocalStorage.DictPorts exposing (MsgWrapper, make)
+
+{-| Enable development use of the `LocalStorage` module from `elm reactor`.
+-}
 
 import Dict exposing (Dict)
 import Json.Encode as JE
@@ -23,18 +26,36 @@ import LocalStorage.SharedTypes
         , Value
         , emptyDictState
         )
+import Task
 
 
 type alias CmdWrapper msg =
     Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg
 
 
-make : CmdWrapper msg -> Ports msg
+type alias MsgWrapper msg =
+    Operation -> Maybe (Ports msg) -> Key -> Value -> msg
+
+
+wrapperToCmd : MsgWrapper msg -> Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg
+wrapperToCmd wrapper operation ports key value =
+    wrapper operation ports key value
+        |> Task.succeed
+        |> Task.perform identity
+
+
+{-| Create a `Ports` object from a message wrapper, usually just one of your Msg options.
+-}
+make : MsgWrapper msg -> Ports msg
 make wrapper =
+    let
+        cmdWrapper =
+            wrapperToCmd wrapper
+    in
     Ports
-        { getItem = getItem wrapper
-        , setItem = setItem wrapper
-        , clear = clear wrapper
+        { getItem = getItem cmdWrapper
+        , setItem = setItem cmdWrapper
+        , clear = clear cmdWrapper
         , state = emptyDictState
         }
 

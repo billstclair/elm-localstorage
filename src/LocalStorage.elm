@@ -22,28 +22,45 @@ module LocalStorage
         , setPorts
         )
 
+{-| The 'LocalStorage' module does most of the work in using the JavaScript `localStorage` facility to persistently store key/value pairs.
+-}
+
 import LocalStorage.SharedTypes exposing (Key, Ports(..), Value, emptyDictState)
 
 
+{-| Opaque type. Returned by `make` and `getPorts`. Passed to the other functions.
+-}
 type LocalStorage msg
     = LocalStorage ( Ports msg, String )
 
 
+{-| Return the `Ports` instance you passed to `make` or `setPorts`.
+-}
 getPorts : LocalStorage msg -> Ports msg
 getPorts (LocalStorage ( ports, _ )) =
     ports
 
 
+{-| Set the internal `Ports` value. Fetch it back with `getPorts`.
+-}
 setPorts : Ports msg -> LocalStorage msg -> LocalStorage msg
 setPorts ports (LocalStorage ( _, prefix )) =
     LocalStorage ( ports, prefix )
 
 
+{-| Make a `LocalStorage` instance.
+
+If `prefix` is not empty (""), will prefix all keys in JS `localStorage` with
+`prexix ++ "."`.
+
+-}
 make : Ports msg -> String -> LocalStorage msg
 make ports prefix =
     LocalStorage ( ports, prefix )
 
 
+{-| Create a `Ports` value, using what are usually your real Elm `port`s.
+-}
 makeRealPorts : (Key -> Cmd msg) -> (( Key, Value ) -> Cmd msg) -> (String -> Cmd msg) -> Ports msg
 makeRealPorts getPort setPort clearPort =
     Ports
@@ -62,6 +79,8 @@ addPrefix prefix key =
         prefix ++ "." ++ key
 
 
+{-| Return a `Cmd` to fetch the value for the `Key` from `LocalStorage`.
+-}
 getItem : LocalStorage msg -> Key -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
     case ports of
@@ -69,6 +88,8 @@ getItem (LocalStorage ( ports, prefix )) key =
             p.getItem ports (addPrefix prefix key)
 
 
+{-| Return a `Cmd` to set the value for the `Key` to `Value` in `LocalStorage`.
+-}
 setItem : LocalStorage msg -> Key -> Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
@@ -76,6 +97,8 @@ setItem (LocalStorage ( ports, prefix )) key value =
             p.setItem ports ( addPrefix prefix key, value )
 
 
+{-| Return a `Cmd` to clear all JS `localStorage` keys that begin with the `prefix` passed to `make`.
+-}
 clear : LocalStorage msg -> Cmd msg
 clear (LocalStorage ( ports, prefix )) =
     case ports of
