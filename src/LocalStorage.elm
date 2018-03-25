@@ -46,7 +46,16 @@ module LocalStorage
 
 -}
 
-import LocalStorage.SharedTypes exposing (Key, Ports(..), Value, emptyDictState)
+import LocalStorage.SharedTypes
+    exposing
+        ( ClearPort
+        , GetItemPort
+        , Key
+        , Ports(..)
+        , SetItemPort
+        , Value
+        , emptyDictState
+        )
 
 
 {-| Opaque type. Returned by `make` and `getPorts`. Passed to the other functions.
@@ -82,7 +91,7 @@ make ports prefix =
 
 {-| Create a `Ports` value, using what are usually your real Elm `port`s.
 -}
-makeRealPorts : (Key -> Cmd msg) -> (( Key, Value ) -> Cmd msg) -> (String -> Cmd msg) -> Ports msg
+makeRealPorts : GetItemPort msg -> SetItemPort msg -> ClearPort msg -> Ports msg
 makeRealPorts getPort setPort clearPort =
     Ports
         { getItem = \_ -> getPort

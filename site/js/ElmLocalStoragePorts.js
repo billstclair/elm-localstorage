@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////
 //
-// localStoragePorts.js
+// ElmLocalStoragePorts.js
 // JavaScript runtime code for Elm LocalStorage module.
 // Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
 // Some rights reserved.
@@ -10,11 +10,11 @@
 //////////////////////////////////////////////////////////////////////
 
 // The single global variable defined by this file
-var localStoragePorts = {};
+var ElmLocalStoragePorts = {};
 
 (function() {
 
-localStoragePorts.subscribe = subscribe;
+ElmLocalStoragePorts.subscribe = subscribe;
 
 function subscribe(app, getPortName, setPortName, clearPortName, receivePortName) {
 
