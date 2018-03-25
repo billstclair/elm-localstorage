@@ -10,7 +10,7 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.DictPorts exposing (CmdWrapper, DictPorts, make)
+module LocalStorage.DictPorts exposing (CmdWrapper, make)
 
 import Dict exposing (Dict)
 import Json.Encode as JE
@@ -25,15 +25,11 @@ import LocalStorage.SharedTypes
         )
 
 
-type alias DictPorts msg =
-    Ports msg
-
-
 type alias CmdWrapper msg =
-    Operation -> DictPorts msg -> Key -> Value -> Cmd msg
+    Operation -> Ports msg -> Key -> Value -> Cmd msg
 
 
-make : CmdWrapper msg -> DictPorts msg
+make : CmdWrapper msg -> Ports msg
 make wrapper =
     Ports
         { getItem = getItem wrapper
@@ -43,7 +39,7 @@ make wrapper =
         }
 
 
-getItem : CmdWrapper msg -> DictPorts msg -> String -> Key -> Cmd msg
+getItem : CmdWrapper msg -> Ports msg -> String -> Key -> Cmd msg
 getItem wrapper ports prefix key =
     case ports of
         Ports p ->
@@ -59,7 +55,7 @@ getItem wrapper ports prefix key =
             wrapper GetItemOperation ports key value
 
 
-setItem : CmdWrapper msg -> DictPorts msg -> String -> Key -> Value -> Cmd msg
+setItem : CmdWrapper msg -> Ports msg -> String -> Key -> Value -> Cmd msg
 setItem wrapper ports prefix key value =
     case ports of
         Ports p ->
@@ -73,7 +69,7 @@ setItem wrapper ports prefix key value =
             wrapper SetItemOperation newPorts key value
 
 
-clear : CmdWrapper msg -> DictPorts msg -> String -> Cmd msg
+clear : CmdWrapper msg -> Ports msg -> String -> Cmd msg
 clear wrapper ports prefix =
     case ports of
         Ports p ->
