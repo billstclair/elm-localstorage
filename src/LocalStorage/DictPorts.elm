@@ -10,14 +10,9 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.DictPorts exposing (MsgWrapper, make)
+module LocalStorage.DictPorts exposing (make)
 
 {-| Simulate ports for using the `LocalStorage` module from `elm reactor`.
-
-
-# Types
-
-@docs MsgWrapper
 
 
 # Functions
@@ -32,6 +27,7 @@ import LocalStorage.SharedTypes
     exposing
         ( DictState
         , Key
+        , MsgWrapper
         , Operation(..)
         , Ports(..)
         , Value
@@ -42,17 +38,6 @@ import Task
 
 type alias CmdWrapper msg =
     Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg
-
-
-{-| Your Msg, which wraps the key/value pair from a `getItem` return.
-
-For real ports, you'll only care about the `GetItem` operation. You'll get `Nothing` for the `Ports`.
-
-For simluated ports, you need to store the `Ports` in your `Model`.
-
--}
-type alias MsgWrapper msg =
-    Operation -> Maybe (Ports msg) -> Key -> Value -> msg
 
 
 wrapperToCmd : MsgWrapper msg -> Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg

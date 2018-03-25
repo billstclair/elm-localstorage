@@ -16,12 +16,14 @@ module LocalStorage.SharedTypes
         , DictState
         , GetItemPort
         , Key
+        , MsgWrapper
         , Operation(..)
         , Ports(..)
         , ReceiveItemPort
         , SetItemPort
         , Value
         , emptyDictState
+        , receiveWrapper
         )
 
 {-| Types for the `LocalStorage` module.
@@ -29,12 +31,17 @@ module LocalStorage.SharedTypes
 
 # Types
 
-@docs Key, Value, Operation, Ports, DictState
+@docs Key, Value, Operation, Ports, DictState, MsgWrapper
 
 
 # Port Signatures
 
 @docs GetItemPort, SetItemPort, ClearPort, ReceiveItemPort
+
+
+# Functions
+
+@docs receiveWrapper
 
 
 # Constants
@@ -44,7 +51,8 @@ module LocalStorage.SharedTypes
 -}
 
 import Dict exposing (Dict)
-import Json.Encode
+import Json.Decode as JD
+import Json.Encode as JE
 
 
 {-| A convenience type for keys in the store. Same as `String`.
@@ -56,7 +64,7 @@ type alias Key =
 {-| A convenience type for values in the store. Same as `Json.Encode.Value`.
 -}
 type alias Value =
-    Json.Encode.Value
+    JE.Value
 
 
 {-| A `Dict` that stores key/value pairs for the simulated ports.
@@ -83,6 +91,7 @@ type Operation
     = GetItemOperation
     | SetItemOperation
     | ClearOperation
+    | ErrorOperation
 
 
 {-| The required signature of your `localStorage.getItem` port.
@@ -106,7 +115,37 @@ type alias ClearPort msg =
 {-| The required signature of your subscription to receive `getItem` values.
 -}
 type alias ReceiveItemPort msg =
-    (( Key, Value ) -> msg) -> Sub msg
+    (Value -> msg) -> Sub msg
+
+
+kvDecoder : JD.Decoder ( Key, Value )
+kvDecoder =
+    JD.map2 (,)
+        (JD.field "key" JD.string)
+        (JD.field "value" JD.value)
+
+
+{-| Use this to turn the Value coming from a receive port into a Msg.
+-}
+receiveWrapper : MsgWrapper msg -> Value -> msg
+receiveWrapper wrapper value =
+    case JD.decodeValue kvDecoder value of
+        Ok ( key, value ) ->
+            wrapper GetItemOperation Nothing key value
+
+        Err msg ->
+            wrapper ErrorOperation Nothing msg JE.null
+
+
+{-| Your Msg, which wraps the key/value pair from a `getItem` return.
+
+For real ports, you'll only care about the `GetItem` operation. You'll get `Nothing` for the `Ports`.
+
+For simluated ports, you need to store the `Ports` in your `Model`.
+
+-}
+type alias MsgWrapper msg =
+    Operation -> Maybe (Ports msg) -> Key -> Value -> msg
 
 
 {-| Wrap up your ports.

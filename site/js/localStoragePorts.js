@@ -18,6 +18,11 @@ localStoragePorts.subscribe = subscribe;
 
 function subscribe(app, getPortName, setPortName, clearPortName, receivePortName) {
 
+  if (!getPortName) getPortName = "getItem";
+  if (!setPortName) setPortName = "setItem";
+  if (!clearPortName) clearPortName = "clear";
+  if (!receivePortName) receivePortName = "receiveItem";
+
   var receivePort = app.ports[receivePortName];
 
   app.ports[getPortName].subscribe(function(key) {
@@ -26,7 +31,7 @@ function subscribe(app, getPortName, setPortName, clearPortName, receivePortName
       val = JSON.parse(localStorage.getItem(key))
     } catch (e) {
     }
-    receivePort.send([key, val])
+    receivePort.send({ key: key, value: val })
     });
 
   app.ports[setPortName].subscribe(function(kv) {

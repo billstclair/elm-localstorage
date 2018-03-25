@@ -28,9 +28,12 @@ var initialModel = null;
 // Change "PortExample" to your application's module name.
 var app = Elm.PortExample.fullscreen(initialModel);
 
-// Replace "getItem" & friends with the names you use for your ports, if different.
-// See example/PortExample.elm for the expected Elm signatures of the ports.
-localStoragePorts.subscribe(app, "getItem", "setItem", "clear", "receiveItem");
+localStoragePorts.subscribe(app);
+
+// If you use non-standard names for the ports, you need to name them:
+//
+// localStoragePorts.subscript(app, "getItem", "setItem", "clear", "receiveItem");
+//
 
     </script>
   </body>

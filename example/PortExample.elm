@@ -26,6 +26,7 @@ import LocalStorage.SharedTypes
         , ReceiveItemPort
         , SetItemPort
         , Value
+        , receiveWrapper
         )
 import SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
 import Task
@@ -59,4 +60,4 @@ port receiveItem : ReceiveItemPort msg
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    receiveItem <| \( key, value ) -> UpdatePorts GetItemOperation Nothing key value
+    receiveItem <| receiveWrapper UpdatePorts
