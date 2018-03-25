@@ -1,4 +1,4 @@
-[billstclair/elm-localstorage package](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest) at elm-lang.org
+Published as the [billstclair/elm-localstorage package](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest) at elm-lang.org
 
 I've built many projects that use JavaScript's `localStorage` mechanism for persistent storage. I've waited patiently for Evan to add a mechanism to the standard library, but he refuses to settle on an API. So I'm doing it.
 
