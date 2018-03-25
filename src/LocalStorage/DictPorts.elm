@@ -26,7 +26,7 @@ import LocalStorage.SharedTypes
 
 
 type alias CmdWrapper msg =
-    Operation -> Ports msg -> Key -> Value -> Cmd msg
+    Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg
 
 
 make : CmdWrapper msg -> Ports msg
@@ -39,8 +39,8 @@ make wrapper =
         }
 
 
-getItem : CmdWrapper msg -> Ports msg -> String -> Key -> Cmd msg
-getItem wrapper ports prefix key =
+getItem : CmdWrapper msg -> Ports msg -> ( String, Key ) -> Cmd msg
+getItem wrapper ports ( prefix, key ) =
     case ports of
         Ports p ->
             let
@@ -52,11 +52,11 @@ getItem wrapper ports prefix key =
                         Just value ->
                             value
             in
-            wrapper GetItemOperation ports key value
+            wrapper GetItemOperation (Just ports) key value
 
 
-setItem : CmdWrapper msg -> Ports msg -> String -> Key -> Value -> Cmd msg
-setItem wrapper ports prefix key value =
+setItem : CmdWrapper msg -> Ports msg -> ( String, Key, Value ) -> Cmd msg
+setItem wrapper ports ( prefix, key, value ) =
     case ports of
         Ports p ->
             let
@@ -66,7 +66,7 @@ setItem wrapper ports prefix key value =
                 newPorts =
                     Ports { p | state = dict }
             in
-            wrapper SetItemOperation newPorts key value
+            wrapper SetItemOperation (Just newPorts) key value
 
 
 clear : CmdWrapper msg -> Ports msg -> String -> Cmd msg
@@ -77,4 +77,4 @@ clear wrapper ports prefix =
                 newPorts =
                     Ports { p | state = Dict.empty }
             in
-            wrapper ClearOperation newPorts "" JE.null
+            wrapper ClearOperation (Just newPorts) "" JE.null

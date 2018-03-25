@@ -15,8 +15,9 @@ module LocalStorage
         ( LocalStorage
         , clear
         , getItem
+        , getPorts
         , make
-        , makeReal
+        , makeRealPorts
         , setItem
         , setPorts
         )
@@ -26,6 +27,11 @@ import LocalStorage.SharedTypes exposing (Key, Ports(..), Value, emptyDictState)
 
 type LocalStorage msg
     = LocalStorage ( Ports msg, String )
+
+
+getPorts : LocalStorage msg -> Ports msg
+getPorts (LocalStorage ( ports, _ )) =
+    ports
 
 
 setPorts : Ports msg -> LocalStorage msg -> LocalStorage msg
@@ -38,32 +44,28 @@ make ports prefix =
     LocalStorage ( ports, prefix )
 
 
-makeReal : String -> (String -> Key -> Cmd msg) -> (String -> Key -> Value -> Cmd msg) -> (String -> Cmd msg) -> LocalStorage msg
-makeReal prefix getPort setPort clearPort =
-    let
-        ports =
-            Ports
-                { getItem = \_ -> getPort
-                , setItem = \_ -> setPort
-                , clear = \_ -> clearPort
-                , state = emptyDictState
-                }
-    in
-    make ports prefix
+makeRealPorts : String -> (( String, Key ) -> Cmd msg) -> (( String, Key, Value ) -> Cmd msg) -> (String -> Cmd msg) -> Ports msg
+makeRealPorts prefix getPort setPort clearPort =
+    Ports
+        { getItem = \_ -> getPort
+        , setItem = \_ -> setPort
+        , clear = \_ -> clearPort
+        , state = emptyDictState
+        }
 
 
 getItem : LocalStorage msg -> Key -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
     case ports of
         Ports p ->
-            p.getItem ports prefix key
+            p.getItem ports ( prefix, key )
 
 
 setItem : LocalStorage msg -> Key -> Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
         Ports p ->
-            p.setItem ports prefix key value
+            p.setItem ports ( prefix, key, value )
 
 
 clear : LocalStorage msg -> Cmd msg

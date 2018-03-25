@@ -10,7 +10,7 @@
 ----------------------------------------------------------------------
 
 
-module SharedUI exposing (Model, Msg(..), init, update, view)
+module SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
 
 import Debug exposing (log)
 import Html exposing (Html, button, div, h2, input, p, table, td, text, tr)
@@ -29,6 +29,11 @@ type alias Model =
     }
 
 
+getPorts : Model -> Ports Msg
+getPorts model =
+    LocalStorage.getPorts model.storage
+
+
 prefix : String
 prefix =
     "example"
@@ -39,7 +44,7 @@ type Msg
     | SetValue String
     | GetItem
     | SetItem
-    | UpdatePorts Operation (Ports Msg) Key Value
+    | UpdatePorts Operation (Maybe (Ports Msg)) Key Value
 
 
 {-| Still need to decode `initialModel`
@@ -82,7 +87,16 @@ update msg model =
                         _ ->
                             model
             in
-            { mdl | storage = setPorts ports model.storage } ! []
+            { mdl
+                | storage =
+                    case ports of
+                        Nothing ->
+                            model.storage
+
+                        Just ps ->
+                            setPorts ps model.storage
+            }
+                ! []
 
 
 valueDecoder : JD.Decoder String

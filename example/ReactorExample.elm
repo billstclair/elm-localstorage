@@ -29,7 +29,7 @@ main =
         }
 
 
-wrapper : Operation -> Ports Msg -> Key -> Value -> Cmd Msg
+wrapper : Operation -> Maybe (Ports Msg) -> Key -> Value -> Cmd Msg
 wrapper operation ports key value =
     UpdatePorts operation ports key value
         |> Task.succeed
