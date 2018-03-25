@@ -10,41 +10,36 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.DictPorts exposing (CmdWrapper, make)
+module LocalStorage.DictPorts exposing (CmdWrapper, DictPorts, DictState, make)
 
 import Dict exposing (Dict)
 import Json.Encode as JE
 import LocalStorage.SharedTypes exposing (Key, Operation(..), Ports(..), Value)
 
 
-type alias StorageDict =
+type alias DictState =
     Dict Key Value
 
 
-type alias StoragePorts msg =
-    Ports StorageDict msg
+type alias DictPorts msg =
+    Ports DictState msg
 
 
 type alias CmdWrapper msg =
-    Operation -> StoragePorts msg -> ( Key, Value ) -> Cmd msg
+    Operation -> DictPorts msg -> ( Key, Value ) -> Cmd msg
 
 
-make : CmdWrapper msg -> StoragePorts msg
+make : CmdWrapper msg -> DictPorts msg
 make wrapper =
-    let
-        state : StorageDict
-        state =
-            Dict.empty
-    in
     Ports
         { getItem = getItem wrapper
         , setItem = setItem wrapper
         , clear = clear wrapper
-        , state = state
+        , state = Dict.empty
         }
 
 
-getItem : CmdWrapper msg -> StoragePorts msg -> String -> Key -> Cmd msg
+getItem : CmdWrapper msg -> DictPorts msg -> String -> Key -> Cmd msg
 getItem wrapper ports prefix key =
     case ports of
         Ports p ->
@@ -60,7 +55,7 @@ getItem wrapper ports prefix key =
             wrapper GetItemOperation ports ( key, value )
 
 
-setItem : CmdWrapper msg -> StoragePorts msg -> String -> Key -> Value -> Cmd msg
+setItem : CmdWrapper msg -> DictPorts msg -> String -> Key -> Value -> Cmd msg
 setItem wrapper ports prefix key value =
     case ports of
         Ports p ->
@@ -74,7 +69,7 @@ setItem wrapper ports prefix key value =
             wrapper SetItemOperation newPorts ( key, value )
 
 
-clear : CmdWrapper msg -> StoragePorts msg -> String -> Cmd msg
+clear : CmdWrapper msg -> DictPorts msg -> String -> Cmd msg
 clear wrapper ports prefix =
     case ports of
         Ports p ->

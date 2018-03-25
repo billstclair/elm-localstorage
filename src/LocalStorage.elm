@@ -18,6 +18,7 @@ module LocalStorage
         , make
         , makeReal
         , setItem
+        , setPorts
         )
 
 import LocalStorage.SharedTypes exposing (Key, Ports(..), Value)
@@ -25,6 +26,11 @@ import LocalStorage.SharedTypes exposing (Key, Ports(..), Value)
 
 type LocalStorage state msg
     = LocalStorage ( Ports state msg, String )
+
+
+setPorts : Ports state msg -> LocalStorage state msg -> LocalStorage state msg
+setPorts ports (LocalStorage ( _, prefix )) =
+    LocalStorage ( ports, prefix )
 
 
 make : Ports state msg -> String -> LocalStorage state msg
