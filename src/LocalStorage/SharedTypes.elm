@@ -49,8 +49,8 @@ type Operation
 
 type Ports msg
     = Ports
-        { getItem : Ports msg -> ( String, Key ) -> Cmd msg
-        , setItem : Ports msg -> ( String, Key, Value ) -> Cmd msg
+        { getItem : Ports msg -> Key -> Cmd msg
+        , setItem : Ports msg -> ( Key, Value ) -> Cmd msg
         , clear : Ports msg -> String -> Cmd msg
         , state : DictState
         }

@@ -32,13 +32,13 @@ main =
 
 ports : Ports Msg
 ports =
-    LocalStorage.makeRealPorts "example" getItem setItem clear
+    LocalStorage.makeRealPorts getItem setItem clear
 
 
-port getItem : ( String, Key ) -> Cmd msg
+port getItem : Key -> Cmd msg
 
 
-port setItem : ( String, Key, Value ) -> Cmd msg
+port setItem : ( Key, Value ) -> Cmd msg
 
 
 port clear : String -> Cmd msg

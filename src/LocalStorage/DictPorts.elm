@@ -39,8 +39,8 @@ make wrapper =
         }
 
 
-getItem : CmdWrapper msg -> Ports msg -> ( String, Key ) -> Cmd msg
-getItem wrapper ports ( prefix, key ) =
+getItem : CmdWrapper msg -> Ports msg -> Key -> Cmd msg
+getItem wrapper ports key =
     case ports of
         Ports p ->
             let
@@ -55,8 +55,8 @@ getItem wrapper ports ( prefix, key ) =
             wrapper GetItemOperation (Just ports) key value
 
 
-setItem : CmdWrapper msg -> Ports msg -> ( String, Key, Value ) -> Cmd msg
-setItem wrapper ports ( prefix, key, value ) =
+setItem : CmdWrapper msg -> Ports msg -> ( Key, Value ) -> Cmd msg
+setItem wrapper ports ( key, value ) =
     case ports of
         Ports p ->
             let

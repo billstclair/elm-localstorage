@@ -44,8 +44,8 @@ make ports prefix =
     LocalStorage ( ports, prefix )
 
 
-makeRealPorts : String -> (( String, Key ) -> Cmd msg) -> (( String, Key, Value ) -> Cmd msg) -> (String -> Cmd msg) -> Ports msg
-makeRealPorts prefix getPort setPort clearPort =
+makeRealPorts : (Key -> Cmd msg) -> (( Key, Value ) -> Cmd msg) -> (String -> Cmd msg) -> Ports msg
+makeRealPorts getPort setPort clearPort =
     Ports
         { getItem = \_ -> getPort
         , setItem = \_ -> setPort
@@ -54,18 +54,26 @@ makeRealPorts prefix getPort setPort clearPort =
         }
 
 
+addPrefix : String -> Key -> Key
+addPrefix prefix key =
+    if prefix == "" then
+        key
+    else
+        prefix ++ "." ++ key
+
+
 getItem : LocalStorage msg -> Key -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
     case ports of
         Ports p ->
-            p.getItem ports ( prefix, key )
+            p.getItem ports (addPrefix prefix key)
 
 
 setItem : LocalStorage msg -> Key -> Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
         Ports p ->
-            p.setItem ports ( prefix, key, value )
+            p.setItem ports ( addPrefix prefix key, value )
 
 
 clear : LocalStorage msg -> Cmd msg
