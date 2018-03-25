@@ -12,7 +12,18 @@
 
 module LocalStorage.DictPorts exposing (MsgWrapper, make)
 
-{-| Enable development use of the `LocalStorage` module from `elm reactor`.
+{-| Simulate ports for using the `LocalStorage` module from `elm reactor`.
+
+
+# Types
+
+@docs MsgWrapper
+
+
+# Functions
+
+@docs make
+
 -}
 
 import Dict exposing (Dict)
@@ -33,6 +44,13 @@ type alias CmdWrapper msg =
     Operation -> Maybe (Ports msg) -> Key -> Value -> Cmd msg
 
 
+{-| Your Msg, which wraps the key/value pair from a `getItem` return.
+
+For real ports, you'll only care about the `GetItem` operation. You'll get `Nothing` for the `Ports`.
+
+For simluated ports, you need to store the `Ports` in your `Model`.
+
+-}
 type alias MsgWrapper msg =
     Operation -> Maybe (Ports msg) -> Key -> Value -> msg
 

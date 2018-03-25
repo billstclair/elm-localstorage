@@ -23,6 +23,27 @@ module LocalStorage
         )
 
 {-| The 'LocalStorage' module does most of the work in using the JavaScript `localStorage` facility to persistently store key/value pairs.
+
+
+# Types
+
+@docs LocalStorage
+
+
+# Constructors
+
+@docs make, makeRealPorts
+
+
+# Functions
+
+@docs getItem, setItem, clear
+
+
+# State accessors
+
+@docs getPorts, setPorts
+
 -}
 
 import LocalStorage.SharedTypes exposing (Key, Ports(..), Value, emptyDictState)
