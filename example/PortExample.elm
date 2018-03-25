@@ -16,7 +16,17 @@ import Html
 import Json.Encode as JE
 import LocalStorage
 import LocalStorage.DictPorts as DictPorts
-import LocalStorage.SharedTypes exposing (Key, Operation(..), Ports, Value)
+import LocalStorage.SharedTypes
+    exposing
+        ( ClearPort
+        , GetItemPort
+        , Key
+        , Operation(..)
+        , Ports
+        , ReceiveItemPort
+        , SetItemPort
+        , Value
+        )
 import SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
 import Task
 
@@ -35,16 +45,16 @@ ports =
     LocalStorage.makeRealPorts getItem setItem clear
 
 
-port getItem : Key -> Cmd msg
+port getItem : GetItemPort msg
 
 
-port setItem : ( Key, Value ) -> Cmd msg
+port setItem : SetItemPort msg
 
 
-port clear : String -> Cmd msg
+port clear : ClearPort msg
 
 
-port receiveItem : (( Key, Value ) -> msg) -> Sub msg
+port receiveItem : ReceiveItemPort msg
 
 
 subscriptions : Model -> Sub Msg

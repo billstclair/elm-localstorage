@@ -18,6 +18,7 @@ module LocalStorage.SharedTypes
         , Key
         , Operation(..)
         , Ports(..)
+        , ReceiveItemPort
         , SetItemPort
         , Value
         , emptyDictState
@@ -33,7 +34,7 @@ module LocalStorage.SharedTypes
 
 # Port Signatures
 
-@docs GetItemPort, SetItemPort, ClearPort
+@docs GetItemPort, SetItemPort, ClearPort, ReceiveItemPort
 
 
 # Constants
@@ -100,6 +101,12 @@ type alias SetItemPort msg =
 -}
 type alias ClearPort msg =
     String -> Cmd msg
+
+
+{-| The required signature of your subscription to received `getItem` values.
+-}
+type alias ReceiveItemPort msg =
+    (( Key, Value ) -> msg) -> Sub msg
 
 
 {-| Wrap up your ports.
