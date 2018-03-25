@@ -1,0 +1,5 @@
+#!/bin/bash
+
+elm-make PortExample.elm --output index.js
+cd site
+rsyncit

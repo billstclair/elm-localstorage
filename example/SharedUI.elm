@@ -44,6 +44,8 @@ type Msg
     | SetValue String
     | GetItem
     | SetItem
+    | RemoveItem
+    | Clear
     | UpdatePorts Operation (Maybe (Ports Msg)) Key Value
 
 
@@ -72,6 +74,12 @@ update msg model =
 
         SetItem ->
             model ! [ setItem model.storage model.key (JE.string model.value) ]
+
+        RemoveItem ->
+            model ! [ setItem model.storage model.key JE.null ]
+
+        Clear ->
+            model ! [ clear model.storage ]
 
         UpdatePorts operation ports key value ->
             let
@@ -160,6 +168,10 @@ view model =
                             [ text "Get" ]
                         , button [ onClick SetItem ]
                             [ text "Set" ]
+                        , button [ onClick RemoveItem ]
+                            [ text "Remove" ]
+                        , button [ onClick Clear ]
+                            [ text "Clear" ]
                         ]
                     ]
                 ]

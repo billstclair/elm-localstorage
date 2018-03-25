@@ -1,0 +1,37 @@
+<!--------------------------------------------------------------------
+--
+-- index.html
+-- LocalStorage example
+-- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
+-- Some rights reserved.
+-- Distributed under the MIT License
+-- See LICENSE.txt
+--
+---------------------------------------------------------------------->
+
+<html>
+  <head>
+    <title>Your Title Here</title>
+    <!-- Compile your Elm application into index.js. E.g.:
+      -- elm-make PortExample.elm --output site/index.js
+      -->
+    <script type='text/javascript' src='index.js'></script>
+    <script type='text/javascript' src='js/localStoragePorts.js'></script>
+  </head>
+  <body>
+    <script type='text/javascript'>
+
+// Read your saved model here, if you have one.
+// Or do it in your init function, via getItem.
+var initialModel = null;
+
+// Change "PortExample" to your application's module name.
+var app = Elm.PortExample.fullscreen(initialModel);
+
+// Replace "getItem" & friends with the names you use for your ports, if different.
+// See example/PortExample.elm for the expected Elm signatures of the ports.
+localStoragePorts.subscribe(app, "getItem", "setItem", "clear", "receiveItem");
+
+    </script>
+  </body>
+</html>

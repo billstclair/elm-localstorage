@@ -80,4 +80,4 @@ clear : LocalStorage msg -> Cmd msg
 clear (LocalStorage ( ports, prefix )) =
     case ports of
         Ports p ->
-            p.clear ports prefix
+            p.clear ports <| addPrefix prefix ""
