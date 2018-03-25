@@ -35,13 +35,6 @@ ports =
     LocalStorage.makeRealPorts "example" getItem setItem clear
 
 
-wrapper : Operation -> Maybe (Ports Msg) -> Key -> Value -> Cmd Msg
-wrapper operation ports key value =
-    UpdatePorts operation ports key value
-        |> Task.succeed
-        |> Task.perform identity
-
-
 port getItem : ( String, Key ) -> Cmd msg
 
 
