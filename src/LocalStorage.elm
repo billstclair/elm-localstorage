@@ -16,37 +16,52 @@ module LocalStorage
         , clear
         , getItem
         , make
+        , makeReal
         , setItem
-        , subscription
         )
 
-import LocalStorage.SharedTypes exposing (Key, Ports, Value)
+import LocalStorage.SharedTypes exposing (Key, Ports(..), Value)
 
 
-type LocalStorage msg
-    = LocalStorage ( Ports msg, String )
+type LocalStorage state msg
+    = LocalStorage ( Ports state msg, String )
 
 
-make : Ports msg -> String -> LocalStorage msg
+make : Ports state msg -> String -> LocalStorage state msg
 make ports prefix =
     LocalStorage ( ports, prefix )
 
 
-getItem : LocalStorage msg -> Key -> Cmd msg
+makeReal : String -> (String -> Key -> Cmd msg) -> (String -> Key -> Value -> Cmd msg) -> (String -> Cmd msg) -> LocalStorage String msg
+makeReal prefix getPort setPort clearPort =
+    let
+        ports =
+            Ports
+                { getItem = \_ -> getPort
+                , setItem = \_ -> setPort
+                , clear = \_ -> clearPort
+                , state = "Move along. Nothing to see here."
+                }
+    in
+    make ports prefix
+
+
+getItem : LocalStorage state msg -> Key -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
-    ports.getItem prefix key
+    case ports of
+        Ports p ->
+            p.getItem ports prefix key
 
 
-setItem : LocalStorage msg -> ( Key, Value ) -> Cmd msg
+setItem : LocalStorage state msg -> ( Key, Value ) -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) ( key, value ) =
-    ports.setItem prefix key value
+    case ports of
+        Ports p ->
+            p.setItem ports prefix key value
 
 
-clear : LocalStorage msg -> Cmd msg
+clear : LocalStorage state msg -> Cmd msg
 clear (LocalStorage ( ports, prefix )) =
-    ports.clear prefix
-
-
-subscription : LocalStorage msg -> (( Key, Value ) -> msg) -> Sub msg
-subscription (LocalStorage ( ports, prefix )) wrapper =
-    ports.subscription prefix wrapper
+    case ports of
+        Ports p ->
+            p.clear ports prefix

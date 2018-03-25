@@ -10,7 +10,7 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.SharedTypes exposing (Key, Ports, Value)
+module LocalStorage.SharedTypes exposing (Key, Operation(..), Ports(..), Value)
 
 import Json.Encode
 
@@ -23,9 +23,16 @@ type alias Value =
     Json.Encode.Value
 
 
-type alias Ports msg =
-    { getItem : String -> Key -> Cmd msg
-    , setItem : String -> Key -> Value -> Cmd msg
-    , clear : String -> Cmd msg
-    , subscription : String -> (( Key, Value ) -> msg) -> Sub msg
-    }
+type Operation
+    = GetItemOperation
+    | SetItemOperation
+    | ClearOperation
+
+
+type Ports state msg
+    = Ports
+        { getItem : Ports state msg -> String -> Key -> Cmd msg
+        , setItem : Ports state msg -> String -> Key -> Value -> Cmd msg
+        , clear : Ports state msg -> String -> Cmd msg
+        , state : state
+        }
