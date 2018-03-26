@@ -256,9 +256,9 @@ view model =
                 , br
                 , text "Enter a key and press 'Remove' to remove that value."
                 , br
-                , text "Enter a key and press 'List' to list all saved keys beginninng with that key."
+                , text "Enter a key and press 'List' to list all saved keys beginninng with that prefix."
                 , br
-                , text "Press 'Clear' to remove all values."
+                , text "Enter a key and press 'Clear' to remove all key/value pairs beginning with that prefix."
                 ]
             , a [ href "https://github.com/billstclair/elm-localstorage" ]
                 [ text "Source at GitHub" ]
