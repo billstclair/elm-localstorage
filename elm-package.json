@@ -1,5 +1,5 @@
 {
-    "version": "3.0.0",
+    "version": "4.0.0",
     "summary": "elm-localstorage provides persistence via JavaScript's localStorage.",
     "repository": "https://github.com/billstclair/elm-localstorage.git",
     "license": "MIT",
