@@ -10,7 +10,7 @@
 ----------------------------------------------------------------------
 
 
-module SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
+module SharedUI exposing (Model, Msg(..), getPorts, init, prefix, update, view)
 
 import Debug exposing (log)
 import Html exposing (Html, a, button, div, h2, input, p, span, table, td, text, tr)
@@ -18,13 +18,30 @@ import Html.Attributes exposing (href, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as JD
 import Json.Encode as JE
-import LocalStorage exposing (LocalStorage, clear, getItem, setItem, setPorts)
-import LocalStorage.SharedTypes exposing (Key, Operation(..), Ports, Value)
+import LocalStorage
+    exposing
+        ( LocalStorage
+        , clear
+        , getItem
+        , listKeys
+        , setItem
+        , setPorts
+        )
+import LocalStorage.SharedTypes
+    exposing
+        ( Key
+        , Operation(..)
+        , Ports
+        , Value
+        , decodeStringList
+        )
 
 
 type alias Model =
     { key : Key
     , value : String
+    , keysString : String
+    , result : String
     , storage : LocalStorage Msg
     }
 
@@ -44,6 +61,7 @@ type Msg
     | SetValue String
     | GetItem
     | SetItem
+    | ListKeys
     | RemoveItem
     | Clear
     | UpdatePorts Operation (Maybe (Ports Msg)) Key Value
@@ -55,6 +73,8 @@ init : Value -> Ports Msg -> ( Model, Cmd Msg )
 init initialModel ports =
     { key = "key"
     , value = ""
+    , result = ""
+    , keysString = ""
     , storage = LocalStorage.make ports prefix
     }
         ! []
@@ -75,6 +95,9 @@ update msg model =
         SetItem ->
             model ! [ setItem model.storage model.key (JE.string model.value) ]
 
+        ListKeys ->
+            model ! [ listKeys model.storage model.key ]
+
         RemoveItem ->
             model ! [ setItem model.storage model.key JE.null ]
 
@@ -83,17 +106,29 @@ update msg model =
 
         UpdatePorts operation ports key value ->
             let
-                mdl =
+                ( mdl, v ) =
                     case operation of
                         GetItemOperation ->
                             let
                                 val =
                                     decodeValue value
                             in
-                            { model | value = val }
+                            ( { model | value = val }, val )
+
+                        ListKeysOperation ->
+                            let
+                                keysString =
+                                    case decodeStringList value of
+                                        Err msg ->
+                                            msg
+
+                                        Ok keys ->
+                                            toString keys
+                            in
+                            ( { model | keysString = keysString }, keysString )
 
                         _ ->
-                            model
+                            ( model, "" )
             in
             { mdl
                 | storage =
@@ -103,6 +138,19 @@ update msg model =
 
                         Just ps ->
                             setPorts ps model.storage
+                , result =
+                    case operation of
+                        ListKeysOperation ->
+                            toString
+                                { operation = operation
+                                , prefix = key
+                                }
+
+                        _ ->
+                            toString
+                                { operation = operation
+                                , key = key
+                                }
             }
                 ! []
 
@@ -168,12 +216,24 @@ view model =
                         ]
                     ]
                 , tr []
+                    [ td [] [ b "Keys:" ]
+                    , td []
+                        [ text model.keysString ]
+                    ]
+                , tr []
+                    [ td [] [ b "Result:" ]
+                    , td []
+                        [ text model.result ]
+                    ]
+                , tr []
                     [ td [] []
                     , td []
                         [ button [ onClick GetItem ]
                             [ text "Get" ]
                         , button [ onClick SetItem ]
                             [ text "Set" ]
+                        , button [ onClick ListKeys ]
+                            [ text "List" ]
                         , button [ onClick RemoveItem ]
                             [ text "Remove" ]
                         , button [ onClick Clear ]

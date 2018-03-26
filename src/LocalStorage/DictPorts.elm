@@ -32,6 +32,7 @@ import LocalStorage.SharedTypes
         , Ports(..)
         , Value
         , emptyDictState
+        , stripPrefix
         )
 import Task
 
@@ -49,22 +50,23 @@ wrapperToCmd wrapper operation ports key value =
 
 {-| Create a `Ports` object from a message wrapper, usually just one of your Msg options.
 -}
-make : MsgWrapper msg -> Ports msg
-make wrapper =
+make : MsgWrapper msg -> String -> Ports msg
+make wrapper prefix =
     let
         cmdWrapper =
             wrapperToCmd wrapper
     in
     Ports
-        { getItem = getItem cmdWrapper
-        , setItem = setItem cmdWrapper
-        , clear = clear cmdWrapper
+        { getItem = getItem cmdWrapper prefix
+        , setItem = setItem cmdWrapper prefix
+        , clear = clear cmdWrapper prefix
+        , listKeys = listKeys cmdWrapper prefix
         , state = emptyDictState
         }
 
 
-getItem : CmdWrapper msg -> Ports msg -> Key -> Cmd msg
-getItem wrapper ports key =
+getItem : CmdWrapper msg -> String -> Ports msg -> Key -> Cmd msg
+getItem wrapper prefix ports key =
     case ports of
         Ports p ->
             let
@@ -76,11 +78,11 @@ getItem wrapper ports key =
                         Just value ->
                             value
             in
-            wrapper GetItemOperation (Just ports) key value
+            wrapper GetItemOperation Nothing (stripPrefix prefix key) value
 
 
-setItem : CmdWrapper msg -> Ports msg -> ( Key, Value ) -> Cmd msg
-setItem wrapper ports ( key, value ) =
+setItem : CmdWrapper msg -> String -> Ports msg -> ( Key, Value ) -> Cmd msg
+setItem wrapper prefix ports ( key, value ) =
     case ports of
         Ports p ->
             let
@@ -90,11 +92,11 @@ setItem wrapper ports ( key, value ) =
                 newPorts =
                     Ports { p | state = dict }
             in
-            wrapper SetItemOperation (Just newPorts) key value
+            wrapper SetItemOperation (Just newPorts) (stripPrefix prefix key) value
 
 
-clear : CmdWrapper msg -> Ports msg -> String -> Cmd msg
-clear wrapper ports prefix =
+clear : CmdWrapper msg -> String -> Ports msg -> String -> Cmd msg
+clear wrapper prefix ports fullPrefix =
     case ports of
         Ports p ->
             let
@@ -102,3 +104,26 @@ clear wrapper ports prefix =
                     Ports { p | state = Dict.empty }
             in
             wrapper ClearOperation (Just newPorts) "" JE.null
+
+
+listKeys : CmdWrapper msg -> String -> Ports msg -> String -> Cmd msg
+listKeys wrapper prefix ports fullPrefix =
+    case ports of
+        Ports p ->
+            let
+                collect : String -> Value -> List String -> List String
+                collect =
+                    \key _ res ->
+                        if String.startsWith fullPrefix key then
+                            key :: res
+                        else
+                            res
+
+                keys =
+                    Dict.foldr collect [] p.state
+                        |> List.map (stripPrefix prefix)
+
+                value =
+                    JE.list <| List.map JE.string keys
+            in
+            wrapper ListKeysOperation Nothing (stripPrefix prefix fullPrefix) value

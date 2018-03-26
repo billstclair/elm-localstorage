@@ -16,14 +16,18 @@ module LocalStorage.SharedTypes
         , DictState
         , GetItemPort
         , Key
+        , ListKeysPort
         , MsgWrapper
         , Operation(..)
         , Ports(..)
         , ReceiveItemPort
         , SetItemPort
         , Value
+        , addPrefix
+        , decodeStringList
         , emptyDictState
         , receiveWrapper
+        , stripPrefix
         )
 
 {-| Types for the `LocalStorage` module.
@@ -36,12 +40,12 @@ module LocalStorage.SharedTypes
 
 # Port Signatures
 
-@docs GetItemPort, SetItemPort, ClearPort, ReceiveItemPort
+@docs GetItemPort, SetItemPort, ClearPort, ListKeysPort, ReceiveItemPort
 
 
 # Functions
 
-@docs receiveWrapper
+@docs receiveWrapper, decodeStringList, addPrefix, stripPrefix
 
 
 # Constants
@@ -91,6 +95,7 @@ type Operation
     = GetItemOperation
     | SetItemOperation
     | ClearOperation
+    | ListKeysOperation
     | ErrorOperation
 
 
@@ -112,29 +117,92 @@ type alias ClearPort msg =
     String -> Cmd msg
 
 
+{-| The required signature of your `localStorage.list` port.
+-}
+type alias ListKeysPort msg =
+    String -> Cmd msg
+
+
 {-| The required signature of your subscription to receive `getItem` values.
 -}
 type alias ReceiveItemPort msg =
     (Value -> msg) -> Sub msg
 
 
-kvDecoder : JD.Decoder ( Key, Value )
-kvDecoder =
+kvDecoder : String -> JD.Decoder ( Key, Value )
+kvDecoder prefix =
     JD.map2 (,)
-        (JD.field "key" JD.string)
+        (JD.map (stripPrefix prefix) <| JD.field "key" JD.string)
         (JD.field "value" JD.value)
+
+
+keysDecoder : String -> JD.Decoder ( Key, Value )
+keysDecoder prefix =
+    JD.map2 (,)
+        (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
+        (JD.field "keys" (JD.list JD.string)
+            |> JD.map (encodeKeyList prefix)
+        )
+
+
+encodeKeyList : String -> List String -> Value
+encodeKeyList prefix keys =
+    List.map (stripPrefix prefix) keys
+        |> List.map JE.string
+        |> JE.list
+
+
+{-| Decode a Value representing a list of strings.
+
+Useful for the result of `LocalStorage.listKeys`.
+
+-}
+decodeStringList : Value -> Result String (List String)
+decodeStringList value =
+    JD.decodeValue (JD.list JD.string) value
+
+
+{-| Drop the length of the first arg from the left of the second.
+-}
+stripPrefix : String -> Key -> String
+stripPrefix prefix key =
+    let
+        len =
+            case String.length prefix of
+                0 ->
+                    0
+
+                x ->
+                    x + 1
+    in
+    String.dropLeft len key
+
+
+{-| Prepend the `String` and a period to the `Key`, or nothing if the `String` is empty.
+-}
+addPrefix : String -> Key -> Key
+addPrefix prefix key =
+    if prefix == "" then
+        key
+    else
+        prefix ++ "." ++ key
 
 
 {-| Use this to turn the Value coming from a receive port into a Msg.
 -}
-receiveWrapper : MsgWrapper msg -> Value -> msg
-receiveWrapper wrapper value =
-    case JD.decodeValue kvDecoder value of
+receiveWrapper : MsgWrapper msg -> String -> Value -> msg
+receiveWrapper wrapper prefix value =
+    case JD.decodeValue (kvDecoder prefix) value of
         Ok ( key, value ) ->
             wrapper GetItemOperation Nothing key value
 
-        Err msg ->
-            wrapper ErrorOperation Nothing msg JE.null
+        Err _ ->
+            case JD.decodeValue (keysDecoder prefix) value of
+                Ok ( key, value ) ->
+                    wrapper ListKeysOperation Nothing key value
+
+                Err msg ->
+                    wrapper ErrorOperation Nothing msg JE.null
 
 
 {-| Your Msg, which wraps the key/value pair from a `getItem` return.
@@ -160,5 +228,6 @@ type Ports msg
         { getItem : Ports msg -> GetItemPort msg
         , setItem : Ports msg -> SetItemPort msg
         , clear : Ports msg -> ClearPort msg
+        , listKeys : Ports msg -> ListKeysPort msg
         , state : DictState
         }

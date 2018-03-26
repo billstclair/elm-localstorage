@@ -16,6 +16,8 @@ module LocalStorage
         , clear
         , getItem
         , getPorts
+        , getPrefix
+        , listKeys
         , make
         , makeRealPorts
         , setItem
@@ -37,12 +39,12 @@ module LocalStorage
 
 # Functions
 
-@docs getItem, setItem, clear
+@docs getItem, setItem, clear, listKeys
 
 
 # State accessors
 
-@docs getPorts, setPorts
+@docs getPorts, setPorts, getPrefix
 
 -}
 
@@ -51,9 +53,11 @@ import LocalStorage.SharedTypes
         ( ClearPort
         , GetItemPort
         , Key
+        , ListKeysPort
         , Ports(..)
         , SetItemPort
         , Value
+        , addPrefix
         , emptyDictState
         )
 
@@ -78,10 +82,17 @@ setPorts ports (LocalStorage ( _, prefix )) =
     LocalStorage ( ports, prefix )
 
 
+{-| Get the prefix passed to `make`
+-}
+getPrefix : LocalStorage msg -> String
+getPrefix (LocalStorage ( _, prefix )) =
+    prefix
+
+
 {-| Make a `LocalStorage` instance.
 
 If `prefix` is not empty (""), will prefix all keys in JS `localStorage` with
-`prexix ++ "."`.
+`prefix ++ "."`.
 
 -}
 make : Ports msg -> String -> LocalStorage msg
@@ -91,22 +102,15 @@ make ports prefix =
 
 {-| Create a `Ports` value, using what are usually your real Elm `port`s.
 -}
-makeRealPorts : GetItemPort msg -> SetItemPort msg -> ClearPort msg -> Ports msg
-makeRealPorts getPort setPort clearPort =
+makeRealPorts : GetItemPort msg -> SetItemPort msg -> ClearPort msg -> ListKeysPort msg -> Ports msg
+makeRealPorts getPort setPort clearPort listKeysPort =
     Ports
         { getItem = \_ -> getPort
         , setItem = \_ -> setPort
         , clear = \_ -> clearPort
+        , listKeys = \_ -> listKeysPort
         , state = emptyDictState
         }
-
-
-addPrefix : String -> Key -> Key
-addPrefix prefix key =
-    if prefix == "" then
-        key
-    else
-        prefix ++ "." ++ key
 
 
 {-| Return a `Cmd` to fetch the value for the `Key` from `LocalStorage`.
@@ -134,3 +138,12 @@ clear (LocalStorage ( ports, prefix )) =
     case ports of
         Ports p ->
             p.clear ports <| addPrefix prefix ""
+
+
+{-| Return a `Cmd` to list all JS `localStorage` keys that begin with the `prefix` passed to `make` followed by the String you pass here.
+-}
+listKeys : LocalStorage msg -> String -> Cmd msg
+listKeys (LocalStorage ( ports, prefix )) userPrefix =
+    case ports of
+        Ports p ->
+            p.listKeys ports <| addPrefix prefix userPrefix

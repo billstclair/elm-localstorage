@@ -16,12 +16,13 @@ var ElmLocalStoragePorts = {};
 
 ElmLocalStoragePorts.subscribe = subscribe;
 
-function subscribe(app, getPortName, setPortName, clearPortName, receivePortName) {
+function subscribe(app, getPortName, setPortName, clearPortName, receivePortName, listKeysPortName) {
 
   if (!getPortName) getPortName = "getItem";
   if (!setPortName) setPortName = "setItem";
   if (!clearPortName) clearPortName = "clear";
   if (!receivePortName) receivePortName = "receiveItem";
+  if (!listKeysPortName) listKeysPortName = "listKeys";
 
   var receivePort = app.ports[receivePortName];
 
@@ -56,6 +57,18 @@ function subscribe(app, getPortName, setPortName, clearPortName, receivePortName
     } else {
       localStorage.clear();
     }
+  });
+
+  app.ports[listKeysPortName].subscribe(function(prefix) {
+    var cnt = localStorage.length;
+    var keys = [];
+    for (var i=0; i<cnt; i++) {
+      var key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        keys.push(key);
+      }
+    }
+    receivePort.send({ prefix: prefix, keys: keys });
   });
 }
 

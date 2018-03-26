@@ -21,6 +21,7 @@ import LocalStorage.SharedTypes
         ( ClearPort
         , GetItemPort
         , Key
+        , ListKeysPort
         , Operation(..)
         , Ports
         , ReceiveItemPort
@@ -43,7 +44,7 @@ main =
 
 ports : Ports Msg
 ports =
-    LocalStorage.makeRealPorts getItem setItem clear
+    LocalStorage.makeRealPorts getItem setItem clear listKeys
 
 
 port getItem : GetItemPort msg
@@ -55,9 +56,16 @@ port setItem : SetItemPort msg
 port clear : ClearPort msg
 
 
+port listKeys : ListKeysPort msg
+
+
 port receiveItem : ReceiveItemPort msg
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    receiveItem <| receiveWrapper UpdatePorts
+    let
+        prefix =
+            LocalStorage.getPrefix model.storage
+    in
+    receiveItem <| receiveWrapper UpdatePorts prefix

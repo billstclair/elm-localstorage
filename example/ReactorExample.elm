@@ -16,7 +16,7 @@ import Html
 import Json.Encode as JE
 import LocalStorage.DictPorts as DictPorts
 import LocalStorage.SharedTypes exposing (Key, Operation, Ports, Value)
-import SharedUI exposing (Model, Msg(..), init, update, view)
+import SharedUI exposing (Model, Msg(..), init, prefix, update, view)
 import Task
 
 
@@ -31,4 +31,4 @@ main =
 
 ports : Ports Msg
 ports =
-    DictPorts.make UpdatePorts
+    DictPorts.make UpdatePorts prefix

@@ -6,7 +6,7 @@ Some ideas here are cribbed from Paul Statezny's [knledg/elm-local-storage-ports
 
 See the [example](https://github.com/billstclair/elm-localstorage/tree/master/example) directory for use of both simulated ports, which work in `elm reactor`, and real ports.
 
-To use the real ports with your own application, create the four ports, `getItem`, `setItem`, `clear`, and `receiveItem`, as is done in [example/PortExample.elm](https://github.com/billstclair/elm-localstorage/tree/master/example/PortExample.elm). Copy the [site](https://github.com/billstclair/elm-localstorage/tree/master/site) directory, inluding its `js` subdirectory. In `index.html`, change the `<title>`, and change `PortExample` to the name of your top-level application module. If you want to use different names for the ports, you can change those here as well.
+To use the real ports with your own application, create the five ports, `getItem`, `setItem`, `clear`, `listKeys`, and `receiveItem`, as is done in [example/PortExample.elm](https://github.com/billstclair/elm-localstorage/tree/master/example/PortExample.elm). Copy the [site](https://github.com/billstclair/elm-localstorage/tree/master/site) directory, inluding its `js` subdirectory. In `index.html`, change the `<title>`, and change `PortExample` to the name of your top-level application module. If you want to use different names for the ports, you can change those here as well.
 
 Finally, compile your application Elm file into `site/index.js`:
 
