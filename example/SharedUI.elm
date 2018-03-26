@@ -251,9 +251,14 @@ view model =
                 ]
             , span []
                 [ text "Enter a key and press 'Get' to fetch its value."
-                , text " Enter a key and value and press 'Set' to set its value."
-                , text " Enter a key and press 'Remove' to remove that value."
-                , text " Press 'Clear' to remove all values."
+                , br
+                , text "Enter a key and value and press 'Set' to set its value."
+                , br
+                , text "Enter a key and press 'Remove' to remove that value."
+                , br
+                , text "Enter a key and press 'List' to list all saved keys beginninng with that key."
+                , br
+                , text "Press 'Clear' to remove all values."
                 ]
             , a [ href "https://github.com/billstclair/elm-localstorage" ]
                 [ text "Source at GitHub" ]
