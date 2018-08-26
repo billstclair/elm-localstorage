@@ -71,38 +71,66 @@ type Msg
 -}
 init : Value -> Ports Msg -> ( Model, Cmd Msg )
 init initialModel ports =
-    { key = "key"
-    , value = ""
-    , result = ""
-    , keysString = ""
-    , storage = LocalStorage.make ports prefix
-    }
-        ! []
+    ( { key = "key"
+      , value = ""
+      , result = ""
+      , keysString = ""
+      , storage = LocalStorage.make ports prefix
+      }
+    , Cmd.none
+    )
+
+
+stringListToString : List String -> String
+stringListToString list =
+    let
+        quoted =
+            List.map (\s -> "\"" ++ s ++ "\"") list
+
+        commas =
+            List.intersperse ", " quoted
+                |> String.concat
+    in
+    "[" ++ commas ++ "]"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetKey key ->
-            { model | key = key } ! []
+            ( { model | key = key }
+            , Cmd.none
+            )
 
         SetValue value ->
-            { model | value = value } ! []
+            ( { model | value = value }
+            , Cmd.none
+            )
 
         GetItem ->
-            model ! [ getItem model.storage model.key ]
+            ( model
+            , getItem model.storage model.key
+            )
 
         SetItem ->
-            model ! [ setItem model.storage model.key (JE.string model.value) ]
+            ( model
+            , setItem model.storage model.key (JE.string model.value)
+            )
 
         ListKeys ->
-            model ! [ listKeys model.storage model.key ]
+            ( model
+            , listKeys model.storage model.key
+            )
 
         RemoveItem ->
-            model ! [ setItem model.storage model.key JE.null ]
+            ( model
+            , setItem model.storage model.key JE.null
+            )
 
         Clear ->
-            model ! [ clear model.storage ]
+            ( model
+            , clear model.storage
+            )
 
         UpdatePorts operation ports key value ->
             let
@@ -119,40 +147,64 @@ update msg model =
                             let
                                 keysString =
                                     case decodeStringList value of
-                                        Err msg ->
-                                            msg
+                                        Err errstr ->
+                                            errstr
 
                                         Ok keys ->
-                                            toString keys
+                                            stringListToString keys
                             in
                             ( { model | keysString = keysString }, keysString )
 
                         _ ->
                             ( model, "" )
             in
-            { mdl
+            ( { mdl
                 | storage =
                     case ports of
                         Nothing ->
                             model.storage
 
-                        Just ps ->
-                            setPorts ps model.storage
+                        Just pps ->
+                            setPorts pps model.storage
                 , result =
                     case operation of
                         ListKeysOperation ->
-                            toString
-                                { operation = operation
-                                , prefix = key
-                                }
+                            "{ "
+                                ++ "operation: "
+                                ++ operationToString operation
+                                ++ ", prefix: "
+                                ++ key
+                                ++ " }"
 
                         _ ->
-                            toString
-                                { operation = operation
-                                , key = key
-                                }
-            }
-                ! []
+                            "{ "
+                                ++ "operation: "
+                                ++ operationToString operation
+                                ++ ", key: "
+                                ++ key
+                                ++ " }"
+              }
+            , Cmd.none
+            )
+
+
+operationToString : Operation -> String
+operationToString operation =
+    case operation of
+        GetItemOperation ->
+            "GetItemOperation"
+
+        SetItemOperation ->
+            "SetItemOperation"
+
+        ClearOperation ->
+            "ClearOperation"
+
+        ListKeysOperation ->
+            "ListKeysOperation"
+
+        ErrorOperation ->
+            "ErrorOperation"
 
 
 valueDecoder : JD.Decoder String
@@ -170,7 +222,7 @@ decodeValue value =
             res
 
         Err err ->
-            err
+            JD.errorToString err
 
 
 br : Html msg

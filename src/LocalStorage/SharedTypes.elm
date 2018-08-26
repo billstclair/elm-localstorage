@@ -10,25 +10,12 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage.SharedTypes
-    exposing
-        ( ClearPort
-        , DictState
-        , GetItemPort
-        , Key
-        , ListKeysPort
-        , MsgWrapper
-        , Operation(..)
-        , Ports(..)
-        , ReceiveItemPort
-        , SetItemPort
-        , Value
-        , addPrefix
-        , decodeStringList
-        , emptyDictState
-        , receiveWrapper
-        , stripPrefix
-        )
+module LocalStorage.SharedTypes exposing
+    ( Key, Value, Operation(..), Ports(..), DictState, MsgWrapper
+    , GetItemPort, SetItemPort, ClearPort, ListKeysPort, ReceiveItemPort
+    , receiveWrapper, decodeStringList, addPrefix, stripPrefix
+    , emptyDictState
+    )
 
 {-| Types for the `LocalStorage` module.
 
@@ -131,14 +118,14 @@ type alias ReceiveItemPort msg =
 
 kvDecoder : String -> JD.Decoder ( Key, Value )
 kvDecoder prefix =
-    JD.map2 (,)
+    JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "key" JD.string)
         (JD.field "value" JD.value)
 
 
 keysDecoder : String -> JD.Decoder ( Key, Value )
 keysDecoder prefix =
-    JD.map2 (,)
+    JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
         (JD.field "keys" (JD.list JD.string)
             |> JD.map (encodeKeyList prefix)
@@ -149,7 +136,7 @@ encodeKeyList : String -> List String -> Value
 encodeKeyList prefix keys =
     List.map (stripPrefix prefix) keys
         |> List.map JE.string
-        |> JE.list
+        |> JE.list identity
 
 
 {-| Decode a Value representing a list of strings.
@@ -159,7 +146,12 @@ Useful for the result of `LocalStorage.listKeys`.
 -}
 decodeStringList : Value -> Result String (List String)
 decodeStringList value =
-    JD.decodeValue (JD.list JD.string) value
+    case JD.decodeValue (JD.list JD.string) value of
+        Err err ->
+            Err <| JD.errorToString err
+
+        Ok list ->
+            Ok list
 
 
 {-| Drop the length of the first arg from the left of the second.
@@ -184,6 +176,7 @@ addPrefix : String -> Key -> Key
 addPrefix prefix key =
     if prefix == "" then
         key
+
     else
         prefix ++ "." ++ key
 
@@ -191,18 +184,21 @@ addPrefix prefix key =
 {-| Use this to turn the Value coming from a receive port into a Msg.
 -}
 receiveWrapper : MsgWrapper msg -> String -> Value -> msg
-receiveWrapper wrapper prefix value =
-    case JD.decodeValue (kvDecoder prefix) value of
+receiveWrapper wrapper prefix json =
+    case JD.decodeValue (kvDecoder prefix) json of
         Ok ( key, value ) ->
             wrapper GetItemOperation Nothing key value
 
         Err _ ->
-            case JD.decodeValue (keysDecoder prefix) value of
+            case JD.decodeValue (keysDecoder prefix) json of
                 Ok ( key, value ) ->
                     wrapper ListKeysOperation Nothing key value
 
-                Err msg ->
-                    wrapper ErrorOperation Nothing msg JE.null
+                Err err ->
+                    wrapper ErrorOperation
+                        Nothing
+                        (JD.errorToString err)
+                        JE.null
 
 
 {-| Your Msg, which wraps the key/value pair from a `getItem` return.

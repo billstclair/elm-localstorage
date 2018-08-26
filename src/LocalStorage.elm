@@ -10,19 +10,12 @@
 ----------------------------------------------------------------------
 
 
-module LocalStorage
-    exposing
-        ( LocalStorage
-        , clear
-        , getItem
-        , getPorts
-        , getPrefix
-        , listKeys
-        , make
-        , makeRealPorts
-        , setItem
-        , setPorts
-        )
+module LocalStorage exposing
+    ( LocalStorage
+    , make, makeRealPorts
+    , getItem, setItem, clear, listKeys
+    , getPorts, setPorts, getPrefix
+    )
 
 {-| The 'LocalStorage' module does most of the work in using the JavaScript `localStorage` facility to persistently store key/value pairs.
 

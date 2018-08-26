@@ -10,9 +10,9 @@
 ----------------------------------------------------------------------
 
 
-module ReactorExample exposing (..)
+module ReactorExample exposing (main, ports)
 
-import Html
+import Browser
 import Json.Encode as JE
 import LocalStorage.DictPorts as DictPorts
 import LocalStorage.SharedTypes exposing (Key, Operation, Ports, Value)
@@ -21,8 +21,8 @@ import Task
 
 
 main =
-    Html.program
-        { init = init JE.null ports
+    Browser.element
+        { init = \x -> init x ports
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none

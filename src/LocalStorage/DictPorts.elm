@@ -75,8 +75,8 @@ getItem wrapper prefix ports key =
                         Nothing ->
                             JE.null
 
-                        Just value ->
-                            value
+                        Just v ->
+                            v
             in
             wrapper GetItemOperation Nothing (stripPrefix prefix key) value
 
@@ -87,7 +87,11 @@ setItem wrapper prefix ports ( key, value ) =
         Ports p ->
             let
                 dict =
-                    Dict.insert key value p.state
+                    if value == JE.null then
+                        Dict.remove key p.state
+
+                    else
+                        Dict.insert key value p.state
 
                 newPorts =
                     Ports { p | state = dict }
@@ -116,6 +120,7 @@ listKeys wrapper prefix ports fullPrefix =
                     \key _ res ->
                         if String.startsWith fullPrefix key then
                             key :: res
+
                         else
                             res
 
@@ -124,6 +129,6 @@ listKeys wrapper prefix ports fullPrefix =
                         |> List.map (stripPrefix prefix)
 
                 value =
-                    JE.list <| List.map JE.string keys
+                    JE.list identity <| List.map JE.string keys
             in
             wrapper ListKeysOperation Nothing (stripPrefix prefix fullPrefix) value

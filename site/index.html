@@ -19,6 +19,7 @@
     <script type='text/javascript' src='js/ElmLocalStoragePorts.js'></script>
   </head>
   <body>
+    <div id='elm'></div>
     <script type='text/javascript'>
 
 // Read your saved model here, if you have one.
@@ -26,7 +27,10 @@
 var initialModel = null;
 
 // Change "PortExample" to your application's module name.
-var app = Elm.PortExample.fullscreen(initialModel);
+var app = Elm.PortExample.init({
+  node: document.getElementById('elm'),
+  flags: initialModel
+});
 
 ElmLocalStoragePorts.subscribe(app);
 

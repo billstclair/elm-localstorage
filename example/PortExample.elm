@@ -10,9 +10,9 @@
 ----------------------------------------------------------------------
 
 
-port module PortExample exposing (..)
+port module PortExample exposing (clear, getItem, listKeys, main, ports, receiveItem, setItem, subscriptions)
 
-import Html
+import Browser
 import Json.Encode as JE
 import LocalStorage
 import LocalStorage.DictPorts as DictPorts
@@ -34,7 +34,7 @@ import Task
 
 
 main =
-    Html.programWithFlags
+    Browser.element
         { init = \initialModel -> init initialModel ports
         , view = view
         , update = update

@@ -2,7 +2,7 @@ Published as the [billstclair/elm-localstorage package](http://package.elm-lang.
 
 I've built many projects that use JavaScript's `localStorage` mechanism for persistent storage. Enough to know the features I need. This package makes that experience available to the community.
 
-Some ideas here are cribbed from Paul Statezny's [knledg/elm-local-storage-ports](https://github.com/knledg/elm-local-storage-ports), but his package is not in the Elm repository. This one also provides an API-compatible pure Elm version that you can use from `elm reactor` during development (with only session persistence, but that suffices for development).
+Some ideas here are cribbed from Paul Statezny's [knledg/elm-local-storage-ports](https://github.com/knledg/elm-local-storage-ports), but his package is not in the Elm repository. This one also provides an API-compatible pure Elm version that you can use it from `elm reactor` during development (with only session persistence, but that suffices for development).
 
 See the [example](https://github.com/billstclair/elm-localstorage/tree/master/example) directory for use of both simulated ports, which work in `elm reactor`, and real ports.
 
