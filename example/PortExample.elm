@@ -33,6 +33,10 @@ import SharedUI exposing (Model, Msg(..), getPorts, init, update, view)
 import Task
 
 
+type alias Frob_me_with_a_sugar_cane =
+    Int
+
+
 main =
     Browser.element
         { init = \initialModel -> init initialModel ports
