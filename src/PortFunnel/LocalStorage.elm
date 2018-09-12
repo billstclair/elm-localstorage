@@ -17,7 +17,7 @@ module PortFunnel.LocalStorage exposing
     , send
     , toString, toJsonString
     , makeSimulatedCmdPort
-    , isLoaded, getPrefix
+    , isLoaded, getPrefix, encode, decode
     )
 
 {-| The `PortFunnelLocalStorage` uses the JavaScript `localStorage` facility to persistently store key/value pairs.
@@ -57,7 +57,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 
 # Non-standard Functions
 
-@docs isLoaded, getPrefix
+@docs isLoaded, getPrefix, encode, decode
 
 -}
 
@@ -248,6 +248,8 @@ strtag str =
             NOTAG
 
 
+{-| Turn a `Message` into a `GenericMessage`.
+-}
 encode : Message -> GenericMessage
 encode message =
     case message of
@@ -333,9 +335,11 @@ keysDecoder : Decoder KeysRecord
 keysDecoder =
     JD.map2 KeysRecord
         (JD.field "prefix" JD.string)
-        (JD.field "value" <| JD.list JD.string)
+        (JD.field "keys" <| JD.list JD.string)
 
 
+{-| Turn a `GenericMessage` into a `Message`.
+-}
 decode : GenericMessage -> Result String Message
 decode { tag, args } =
     case strtag tag of
@@ -392,7 +396,7 @@ decode { tag, args } =
         SimulateGetTag ->
             case JD.decodeValue JD.string args of
                 Ok key ->
-                    Ok (Get key)
+                    Ok (SimulateGet key)
 
                 Err _ ->
                     Err <| "Get key not a string: " ++ JE.encode 0 args
@@ -585,12 +589,12 @@ toString message =
         Keys prefix keys ->
             "<Keys \""
                 ++ prefix
-                ++ " ["
+                ++ "\" ["
                 ++ (List.map (\s -> "\"" ++ s ++ "\"") keys
                         |> List.intersperse ", "
                         |> String.concat
                    )
-                ++ ">"
+                ++ "]>"
 
         Clear prefix ->
             "<Clear \"" ++ prefix ++ "\""
