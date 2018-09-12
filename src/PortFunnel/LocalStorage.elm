@@ -62,6 +62,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 -}
 
 import Dict exposing (Dict)
+import Dict.Extra as DE
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
 import PortFunnel exposing (GenericMessage, ModuleDesc)
@@ -99,19 +100,38 @@ type State
 -}
 type Response
     = NoResponse
-    | GetResponse { key : Key, value : Value }
+    | GetResponse { key : Key, value : Maybe Value }
     | ListKeysResponse { prefix : String, keys : List Key }
 
 
-{-| Messages that can be sent to the JavaScript code.
+{-| Messages that can be sent/received to/from the JavaScript code.
+
+`Startup` is received after the JS code loads. It sets the `isLoaded` flag in our state, and reports `NoResponse`.
+
+`Get` is sent to request a read.
+
+`Put` is sent to request a write or received in response to `Get`. A value of `Nothing` means remove that key/value pair when sent or no value in the store when received.
+
+`ListKeys` is sent to request a list of keys.
+
+`Keys` is received in response to `ListKeys`.
+
+`Clear` is sent to clear keys starting with the prefix. No response is sent.
+
+The `Simulate<Foo>` messages are returned by the simulator and simulated by the `process` function (not exposed, except inside of `moduleDesc`).
+
 -}
 type Message
     = Startup
     | Get Key
-    | Put Key Value
+    | Put Key (Maybe Value)
     | ListKeys Prefix
     | Keys Prefix (List Key)
     | Clear Prefix
+    | SimulateGet Key
+    | SimulatePut Key (Maybe Value)
+    | SimulateListKeys Prefix
+    | SimulateClear Prefix
 
 
 {-| The initial state.
@@ -146,34 +166,148 @@ moduleDesc =
     PortFunnel.makeModuleDesc moduleName encode decode process
 
 
+{-| This is to prevent typos. Only one copy of each string means no typos possible.
+-}
+type Tag
+    = StartupTag
+    | GetTag
+    | PutTag
+    | ListKeysTag
+    | KeysTag
+    | ClearTag
+    | SimulateGetTag
+    | SimulatePutTag
+    | SimulateListKeysTag
+    | SimulateClearTag
+    | NOTAG
+
+
+startupTag =
+    "startup"
+
+
+getTag =
+    "get"
+
+
+putTag =
+    "put"
+
+
+listKeysTag =
+    "listkeys"
+
+
+keysTag =
+    "keys"
+
+
+clearTag =
+    "clear"
+
+
+simulateGetTag =
+    "simulateget"
+
+
+simulatePutTag =
+    "simulateput"
+
+
+simulateListKeysTag =
+    "simulatelistkeys"
+
+
+simulateClearTag =
+    "simulateclear"
+
+
+tagDict : Dict String Tag
+tagDict =
+    Dict.fromList
+        [ ( startupTag, StartupTag )
+        , ( getTag, GetTag )
+        , ( putTag, PutTag )
+        , ( listKeysTag, ListKeysTag )
+        , ( keysTag, KeysTag )
+        , ( clearTag, ClearTag )
+        , ( simulateGetTag, SimulateGetTag )
+        , ( simulatePutTag, SimulatePutTag )
+        , ( simulateListKeysTag, SimulateListKeysTag )
+        , ( simulateClearTag, SimulateClearTag )
+        ]
+
+
+strtag : String -> Tag
+strtag str =
+    case Dict.get str tagDict of
+        Just tag ->
+            tag
+
+        Nothing ->
+            NOTAG
+
+
 encode : Message -> GenericMessage
 encode message =
     case message of
         Startup ->
-            GenericMessage moduleName "startup" JE.null
+            GenericMessage moduleName startupTag JE.null
 
         Get key ->
-            GenericMessage moduleName "get" <| JE.string key
+            GenericMessage moduleName getTag <| JE.string key
 
         Put key value ->
-            GenericMessage moduleName "put" <|
+            GenericMessage moduleName putTag <|
                 JE.object
                     [ ( "key", JE.string key )
-                    , ( "value", value )
+                    , ( "value"
+                      , case value of
+                            Nothing ->
+                                JE.null
+
+                            Just v ->
+                                v
+                      )
                     ]
 
         ListKeys prefix ->
-            GenericMessage moduleName "listkeys" <| JE.string prefix
+            GenericMessage moduleName listKeysTag <| JE.string prefix
 
         Keys prefix keys ->
-            GenericMessage moduleName "keys" <|
+            GenericMessage moduleName keysTag <|
                 JE.object
                     [ ( "prefix", JE.string prefix )
                     , ( "keys", JE.list JE.string keys )
                     ]
 
         Clear prefix ->
-            GenericMessage moduleName "clear" <| JE.string prefix
+            GenericMessage moduleName clearTag <| JE.string prefix
+
+        SimulateGet key ->
+            GenericMessage moduleName simulateGetTag <| JE.string key
+
+        SimulatePut key value ->
+            GenericMessage moduleName simulatePutTag <|
+                JE.object
+                    [ ( "key", JE.string key )
+                    , ( "value"
+                      , case value of
+                            Nothing ->
+                                JE.null
+
+                            Just v ->
+                                v
+                      )
+                    ]
+
+        SimulateListKeys prefix ->
+            GenericMessage moduleName simulateListKeysTag <|
+                JE.string prefix
+
+        SimulateClear prefix ->
+            GenericMessage moduleName simulateClearTag <|
+                JE.string prefix
 
 
 type alias PutRecord =
@@ -204,11 +338,8 @@ keysDecoder =
 
 decode : GenericMessage -> Result String Message
 decode { tag, args } =
-    case tag of
-        "startup" ->
-            Ok Startup
-
-        "get" ->
+    case strtag tag of
+        GetTag ->
             case JD.decodeValue JD.string args of
                 Ok key ->
                     Ok (Get key)
@@ -216,15 +347,22 @@ decode { tag, args } =
                 Err _ ->
                     Err <| "Get key not a string: " ++ JE.encode 0 args
 
-        "put" ->
+        PutTag ->
             case JD.decodeValue putDecoder args of
                 Ok { key, value } ->
-                    Ok (Put key value)
+                    Ok
+                        (Put key <|
+                            if value == JE.null then
+                                Nothing
+
+                            else
+                                Just value
+                        )
 
                 Err _ ->
                     Err <| "Put not { key, value }: " ++ JE.encode 0 args
 
-        "listkeys" ->
+        ListKeysTag ->
             case JD.decodeValue JD.string args of
                 Ok prefix ->
                     Ok (ListKeys prefix)
@@ -232,7 +370,7 @@ decode { tag, args } =
                 Err _ ->
                     Err <| "ListKeys prefix not a string: " ++ JE.encode 0 args
 
-        "keys" ->
+        KeysTag ->
             case JD.decodeValue keysDecoder args of
                 Ok { prefix, keys } ->
                     Ok (Keys prefix keys)
@@ -240,13 +378,59 @@ decode { tag, args } =
                 Err _ ->
                     Err <| "Keys not { prefix, keys }: " ++ JE.encode 0 args
 
-        "clear" ->
+        ClearTag ->
             case JD.decodeValue JD.string args of
                 Ok prefix ->
                     Ok (Clear prefix)
 
                 Err _ ->
                     Err <| "Clear prefix not a string: " ++ JE.encode 0 args
+
+        StartupTag ->
+            Ok Startup
+
+        SimulateGetTag ->
+            case JD.decodeValue JD.string args of
+                Ok key ->
+                    Ok (Get key)
+
+                Err _ ->
+                    Err <| "Get key not a string: " ++ JE.encode 0 args
+
+        SimulatePutTag ->
+            case JD.decodeValue putDecoder args of
+                Ok { key, value } ->
+                    Ok
+                        (SimulatePut key <|
+                            if value == JE.null then
+                                Nothing
+
+                            else
+                                Just value
+                        )
+
+                Err _ ->
+                    Err <| "SimulatePut not { key, value }: " ++ JE.encode 0 args
+
+        SimulateListKeysTag ->
+            case JD.decodeValue JD.string args of
+                Ok prefix ->
+                    Ok (SimulateListKeys prefix)
+
+                Err _ ->
+                    Err <|
+                        "SimulateListKeys prefix not a string: "
+                            ++ JE.encode 0 args
+
+        SimulateClearTag ->
+            case JD.decodeValue JD.string args of
+                Ok prefix ->
+                    Ok (SimulateClear prefix)
+
+                Err _ ->
+                    Err <|
+                        "SimulateClear prefix not a string: "
+                            ++ JE.encode 0 args
 
         _ ->
             Err <| "Unknown tag: " ++ tag
@@ -260,20 +444,70 @@ send =
 
 
 process : Message -> State -> ( State, Response )
-process message (State state) =
+process message ((State state) as boxedState) =
     case message of
         Put key value ->
-            ( State state
+            ( boxedState
             , GetResponse { key = key, value = value }
             )
 
         Keys prefix keys ->
-            ( State state
+            ( boxedState
             , ListKeysResponse { prefix = prefix, keys = keys }
             )
 
         Startup ->
             ( State { state | isLoaded = True }
+            , NoResponse
+            )
+
+        SimulateGet key ->
+            ( boxedState
+            , GetResponse
+                { key = key
+                , value = Dict.get key state.simulationDict
+                }
+            )
+
+        SimulatePut key value ->
+            ( State
+                { state
+                    | simulationDict =
+                        case value of
+                            Nothing ->
+                                Dict.remove key state.simulationDict
+
+                            Just v ->
+                                Dict.insert key v state.simulationDict
+                }
+            , NoResponse
+            )
+
+        SimulateListKeys prefix ->
+            ( boxedState
+            , ListKeysResponse
+                { prefix = prefix
+                , keys =
+                    Dict.foldr
+                        (\k _ res ->
+                            if String.startsWith k prefix then
+                                k :: res
+
+                            else
+                                res
+                        )
+                        []
+                        state.simulationDict
+                }
+            )
+
+        SimulateClear prefix ->
+            ( State
+                { state
+                    | simulationDict =
+                        DE.removeWhen (\k _ -> String.startsWith prefix k)
+                            state.simulationDict
+                }
             , NoResponse
             )
 
@@ -295,8 +529,21 @@ commander _ _ =
 
 simulator : Message -> Maybe Message
 simulator message =
-    -- TODO
-    Nothing
+    case message of
+        Get key ->
+            Just <| SimulateGet key
+
+        Put key value ->
+            Just <| SimulatePut key value
+
+        ListKeys prefix ->
+            Just <| SimulateListKeys prefix
+
+        Clear prefix ->
+            Just <| SimulateClear prefix
+
+        _ ->
+            Nothing
 
 
 {-| Make a simulated `Cmd` port.
@@ -312,7 +559,63 @@ makeSimulatedCmdPort =
 -}
 toString : Message -> String
 toString message =
-    "TODO"
+    case message of
+        Startup ->
+            "<Startup>"
+
+        Get key ->
+            "<Get \"" ++ key ++ "\">"
+
+        Put key value ->
+            "<Put \""
+                ++ key
+                ++ "\" "
+                ++ (case value of
+                        Nothing ->
+                            "null"
+
+                        Just v ->
+                            JE.encode 0 v
+                   )
+                ++ ">"
+
+        ListKeys prefix ->
+            "<ListKeys \"" ++ prefix ++ "\">"
+
+        Keys prefix keys ->
+            "<Keys \""
+                ++ prefix
+                ++ " ["
+                ++ (List.map (\s -> "\"" ++ s ++ "\"") keys
+                        |> List.intersperse ", "
+                        |> String.concat
+                   )
+                ++ ">"
+
+        Clear prefix ->
+            "<Clear \"" ++ prefix ++ "\""
+
+        SimulateGet key ->
+            "<SimulateGet \"" ++ key ++ "\""
+
+        SimulatePut key value ->
+            "<SimulatePut \""
+                ++ key
+                ++ "\" "
+                ++ (case value of
+                        Nothing ->
+                            "null"
+
+                        Just v ->
+                            JE.encode 0 v
+                   )
+                ++ ">"
+
+        SimulateListKeys prefix ->
+            "<SimulateListKeys \"" ++ prefix ++ "\">"
+
+        SimulateClear prefix ->
+            "<SimulateClear \"" ++ prefix ++ "\">"
 
 
 {-| Convert a `Message` to the same JSON string that gets sent
