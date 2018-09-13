@@ -75,24 +75,25 @@ import Dict.Extra as DE
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
 import PortFunnel exposing (GenericMessage, ModuleDesc)
+import PortFunnel.InternalTypes as IT exposing (Message(..))
 
 
 {-| A convenience type for keys in the store. Same as `String`.
 -}
 type alias Key =
-    String
+    IT.Key
 
 
 {-| A convenience type for values in the store. Same as `Json.Encode.Value`.
 -}
 type alias Value =
-    JE.Value
+    IT.Value
 
 
 {-| A convenience type for prefixes. Same as `String`.
 -}
 type alias Prefix =
-    String
+    IT.Prefix
 
 
 {-| Our internal state.
@@ -113,22 +114,13 @@ type Response
     | ListKeysResponse { prefix : String, keys : List Key }
 
 
-{-| An opaque type that represents message to send and receive from the JS code.
+{-| An opaque type that represents a message to send to or receive from the JS code.
 
 There are a number of internal messages, but the ones you can use are created by `get`, `put`, `listkeys`, and `clear`.
 
 -}
-type Message
-    = Startup
-    | Get Key
-    | Put Key (Maybe Value)
-    | ListKeys Prefix
-    | Keys Prefix (List Key)
-    | Clear Prefix
-    | SimulateGet Key
-    | SimulatePut Key (Maybe Value)
-    | SimulateListKeys Prefix
-    | SimulateClear Prefix
+type alias Message =
+    IT.Message
 
 
 {-| Return a `Message` to get a value from local storage.

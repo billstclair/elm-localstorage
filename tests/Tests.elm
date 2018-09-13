@@ -4,7 +4,8 @@ import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Decode as JD
 import Json.Encode as JE
-import PortFunnel.LocalStorage as LS exposing (Message(..), decode, encode)
+import PortFunnel.InternalTypes exposing (Message(..))
+import PortFunnel.LocalStorage as LS exposing (decode, encode)
 import Test exposing (..)
 
 
