@@ -475,10 +475,6 @@ send wrapper message (State state) =
 
 process : Message -> State -> ( State, Response )
 process message ((State state) as boxedState) =
-    let
-        prefix =
-            state.prefix
-    in
     case message of
         Put key value ->
             ( boxedState
@@ -489,7 +485,7 @@ process message ((State state) as boxedState) =
             ( boxedState
             , ListKeysResponse
                 { prefix = prefix
-                , keys = List.map (stripPrefix prefix) keys
+                , keys = List.map (stripPrefix state.prefix) keys
                 }
             )
 
