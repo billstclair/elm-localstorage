@@ -47,10 +47,11 @@ PortFunnel.sub = null;          // set below
 
 function subscribe(app, args) {
   if (!args) args = {};
-  var portNames = args.portNames;
+  portNames = args.portNames;
   if (!portNames) {
     portNames = ['cmdPort', 'subPort'];
   }
+
   var moduleDirectory = args.moduleDirectory;
   if (!moduleDirectory) {
     moduleDirectory = 'js/PortFunnel';
@@ -63,7 +64,9 @@ function subscribe(app, args) {
   var cmd = ports[portNames[0]];
   cmd.subscribe(function(command) {
     var returnValue = commandDispatch(command);
-    if (returnValue) sub.send(returnValue);
+    if (returnValue) {
+      sub.send(returnValue);
+    }
   });  
 
   var modules = args.modules;
@@ -99,10 +102,58 @@ function commandDispatch(command) {
     var module = PortFunnel.modules[moduleName];
     if (module) {
       var cmd = module.cmd;
-      if (cmd) {
+      if (cmd && !queue[moduleName]) {
         var tag = command.tag;
         var args = command.args;
         return cmd(tag, args);
+      } else {
+        var list = queue[moduleName];
+        if (!list) list = [];
+        list.push(command);
+        queue[moduleName] = list;
+        if (!queueDrainOutstanding) {
+          scheduleQueueDrain();
+        }
+      }
+    }
+  }
+}
+
+// queue[moduleName] = an array of commands passed to commandDispatch
+// before the JavaScript module was installed.
+var queue = {};
+var queueDrainOutstanding = false;
+
+function scheduleQueueDrain() {
+  queueDrainOutStanding = true;
+  setTimeout(drainQueue, 10);  // is 0.01 second too short?
+}
+
+function drainQueue() {
+  needReschedule = false;
+  for (var moduleName in queue) {
+    var module = PortFunnel.modules[moduleName];
+    if (!module) {
+      // Can't happen, but handle it anyway
+      delete queue[moduleName];
+    } else {
+        if (!module.cmd) {
+          needReschedule = true;
+        } else {
+          var list = queue[moduleName];
+          delete queue[moduleName];
+          for (var i in list) {
+            var command = list[i];
+            var returnValue = commandDispatch(command);
+            if (returnValue) {
+              PortFunnel.sub.send(returnValue);
+            }
+          }
+        }
+      if (needReschedule) {
+        scheduleQueueDrain();
+      } else {
+        queueDrainOutstanding = false;
       }
     }
   }
