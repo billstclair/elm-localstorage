@@ -11,7 +11,7 @@
 
 
 module PortFunnel.LocalStorage exposing
-    ( Message, Response(..), State, Key
+    ( Message, Response(..), State, Key, Prefix, Value
     , moduleName, moduleDesc, commander
     , initialState
     , send
@@ -28,7 +28,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 
 # Types
 
-@docs Message, Response, State, Key
+@docs Message, Response, State, Key, Prefix, Value
 
 
 # Components of a `PortFunnel.FunnelSpec`
@@ -105,7 +105,7 @@ type State
         }
 
 
-{-| A `MessageResponse` is used to return values for `Get` and `ListKeys`.
+{-| A `Response` is used to return values for `Get` and `ListKeys`.
 -}
 type Response
     = NoResponse
@@ -113,21 +113,9 @@ type Response
     | ListKeysResponse { prefix : String, keys : List Key }
 
 
-{-| Messages that can be sent/received to/from the JavaScript code.
+{-| An opaque type that represents message to send and receive from the JS code.
 
-`Startup` is received after the JS code loads. It sets the `isLoaded` flag in our state, and reports `NoResponse`.
-
-`Get` is sent to request a read.
-
-`Put` is sent to request a write or received in response to `Get`. A value of `Nothing` means remove that key/value pair when sent or no value in the store when received.
-
-`ListKeys` is sent to request a list of keys.
-
-`Keys` is received in response to `ListKeys`.
-
-`Clear` is sent to clear keys starting with the prefix. No response is sent.
-
-The `Simulate<Foo>` messages are returned by the simulator and simulated by the `process` function (not exposed, except inside of `moduleDesc`).
+There are a number of internal messages, but the ones you can use are created by `get`, `put`, `listkeys`, and `clear`.
 
 -}
 type Message
@@ -742,7 +730,7 @@ stripPrefix prefix key =
 
 {-| Returns true if a `Startup` message has been processed.
 
-This is sent by the port code after it has initialized.
+This is sent by the port code after it has initialized. Your code can use this to decide whether to use your real outgoing port or the one created by `makeSimulatedCmdPort`.
 
 -}
 isLoaded : State -> Bool

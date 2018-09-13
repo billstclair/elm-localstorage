@@ -1,6 +1,6 @@
 Published as the [billstclair/elm-localstorage](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest) package at elm-lang.org
 
-This module is built on top of the [billstclair/elm-port-funnel](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest) package, so it can share two ports with other port funnel modules. It requires Elm 0.19.
+This module is built on top of the [billstclair/elm-port-funnel](http://package.elm-lang.org/packages/billstclair/elm-port-funnel/latest) package, so it can share two ports with other port funnel modules. It requires Elm 0.19.
 
 I've built many projects that use JavaScript's `localStorage` mechanism for persistent storage. Enough to know the features I need. This package makes that experience available to the community.
 
