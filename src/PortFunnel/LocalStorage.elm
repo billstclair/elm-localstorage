@@ -11,10 +11,11 @@
 
 
 module PortFunnel.LocalStorage exposing
-    ( Message(..), Response(..), State
+    ( Message, Response(..), State, Key
     , moduleName, moduleDesc, commander
     , initialState
     , send
+    , get, put, listKeys, clear
     , toString, toJsonString
     , makeSimulatedCmdPort
     , isLoaded, getPrefix, encode, decode
@@ -27,7 +28,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 
 # Types
 
-@docs Message, Response, State
+@docs Message, Response, State, Key
 
 
 # Components of a `PortFunnel.FunnelSpec`
@@ -43,6 +44,14 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 # Sending a `Message` out the `Cmd` Port
 
 @docs send
+
+
+# Creating Messages
+
+The `Message` type is opaque, so there are functions to create the four messages
+you may pass to `send`.
+
+@docs get, put, listKeys, clear
 
 
 # Conversion to Strings
@@ -134,7 +143,52 @@ type Message
     | SimulateClear Prefix
 
 
+{-| Return a `Message` to get a value from local storage.
+-}
+get : Key -> Message
+get =
+    Get
+
+
+{-| Return a `Message` to put a value into local storage.
+
+`Nothing` for the value means to remove the key.
+
+-}
+put : Key -> Maybe Value -> Message
+put =
+    Put
+
+
+{-| Return a `Message` to list all keys beginning with a prefix.
+-}
+listKeys : Prefix -> Message
+listKeys =
+    ListKeys
+
+
+{-| Return a message to remove all keys beginning with a prefix.
+
+A prefix of `""` means to remove all keys.
+
+-}
+clear : Prefix -> Message
+clear =
+    Clear
+
+
 {-| The initial state.
+
+The `Prefix` arg (plus a period, if non-blank) is prepended to all
+keys sent to the backend, and removed from keys returned. It basically
+give you a namespace in local storage, and usually matches your
+application name. It allows multiple different Elm applications to be
+served by the same domain without stepping on each other's state.
+
+The state also stores a `Dict`, which acts as the backing store for simulation,
+and a flag saying whether the JavaScript code has sent its "I'm loaded" message
+(see `isLoaded`).
+
 -}
 initialState : Prefix -> State
 initialState prefix =
@@ -478,13 +532,13 @@ process message ((State state) as boxedState) =
     case message of
         Put key value ->
             ( boxedState
-            , GetResponse { key = key, value = value }
+            , GetResponse { key = stripPrefix state.prefix key, value = value }
             )
 
         Keys prefix keys ->
             ( boxedState
             , ListKeysResponse
-                { prefix = prefix
+                { prefix = stripPrefix state.prefix prefix
                 , keys = List.map (stripPrefix state.prefix) keys
                 }
             )
@@ -497,7 +551,7 @@ process message ((State state) as boxedState) =
         SimulateGet key ->
             ( boxedState
             , GetResponse
-                { key = key
+                { key = stripPrefix state.prefix key
                 , value = Dict.get key state.simulationDict
                 }
             )
@@ -519,12 +573,12 @@ process message ((State state) as boxedState) =
         SimulateListKeys prefix ->
             ( boxedState
             , ListKeysResponse
-                { prefix = prefix
+                { prefix = stripPrefix state.prefix prefix
                 , keys =
                     Dict.foldr
                         (\k _ res ->
-                            if String.startsWith k prefix then
-                                k :: res
+                            if String.startsWith prefix k then
+                                stripPrefix state.prefix k :: res
 
                             else
                                 res
@@ -675,6 +729,8 @@ addPrefix prefix key =
         prefix ++ "." ++ key
 
 
+{-| Drop the length of the first arg from the left of the second.
+-}
 stripPrefix : String -> Key -> Key
 stripPrefix prefix key =
     if prefix == "" then

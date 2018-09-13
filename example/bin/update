@@ -1,5 +1,5 @@
 #!/bin/bash
 
-elm-make PortExample.elm --output site/index.js
+elm make Main.elm --output site/elm.js
 cd site
 rsyncit
