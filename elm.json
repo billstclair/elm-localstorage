@@ -3,7 +3,7 @@
     "name": "billstclair/elm-localstorage",
     "summary": "elm-localstorage provides persistence via JavaScript's localStorage.",
     "license": "MIT",
-    "version": "5.0.0",
+    "version": "5.1.0",
     "exposed-modules": [
         "PortFunnel.LocalStorage"
     ],
