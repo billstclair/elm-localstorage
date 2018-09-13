@@ -441,14 +441,44 @@ decode { tag, args } =
 
 
 {-| Send a `Message` through a `Cmd` port.
+
+Note that this `send` function requires that you pass state,
+but it is read-only, so you don't need to update your `Model` state
+on return.
+
 -}
-send : (Value -> Cmd msg) -> Message -> Cmd msg
-send =
-    PortFunnel.sendMessage moduleDesc
+send : (Value -> Cmd msg) -> Message -> State -> Cmd msg
+send wrapper message (State state) =
+    let
+        prefix =
+            state.prefix
+
+        mess =
+            case message of
+                Get key ->
+                    Get (addPrefix prefix key)
+
+                Put key value ->
+                    Put (addPrefix prefix key) value
+
+                ListKeys pref ->
+                    ListKeys (addPrefix prefix pref)
+
+                Clear pref ->
+                    Clear (addPrefix prefix pref)
+
+                _ ->
+                    message
+    in
+    PortFunnel.sendMessage moduleDesc wrapper mess
 
 
 process : Message -> State -> ( State, Response )
 process message ((State state) as boxedState) =
+    let
+        prefix =
+            state.prefix
+    in
     case message of
         Put key value ->
             ( boxedState
@@ -457,7 +487,10 @@ process message ((State state) as boxedState) =
 
         Keys prefix keys ->
             ( boxedState
-            , ListKeysResponse { prefix = prefix, keys = keys }
+            , ListKeysResponse
+                { prefix = prefix
+                , keys = List.map (stripPrefix prefix) keys
+                }
             )
 
         Startup ->
@@ -644,6 +677,15 @@ addPrefix prefix key =
 
     else
         prefix ++ "." ++ key
+
+
+stripPrefix : String -> Key -> Key
+stripPrefix prefix key =
+    if prefix == "" then
+        key
+
+    else
+        String.dropLeft (1 + String.length prefix) key
 
 
 {-| Returns true if a `Startup` message has been processed.

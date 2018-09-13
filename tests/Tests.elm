@@ -53,11 +53,7 @@ encodeDecodeTest : Message -> Test
 encodeDecodeTest message =
     test (LS.toString message)
         (\_ ->
-            let
-                genericMessage =
-                    encode message
-            in
-            expectResult (Ok message) <| decode genericMessage
+            expectResult (Ok message) <| decode (encode message)
         )
 
 
