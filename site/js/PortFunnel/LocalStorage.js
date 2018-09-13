@@ -31,7 +31,9 @@
       }
       return { module: moduleName,
                tag: 'put',
-               args: val
+               args: { key: key,
+                       value : val
+                     }
              };
     } else if (tag == 'put') {
       var key = args.key;

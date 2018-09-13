@@ -311,6 +311,13 @@ view : Model -> Html Msg
 view model =
     div []
         [ h2 [] [ text "LocalStorage Example" ]
+        , case model.error of
+            Nothing ->
+                text ""
+
+            Just err ->
+                p [ style "color" "red" ]
+                    [ text err ]
         , p []
             [ table []
                 [ tr []
