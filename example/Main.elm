@@ -63,6 +63,7 @@ type alias Model =
     , value : String
     , keysString : String
     , useSimulator : Bool
+    , wasLoaded : Bool
     , funnelState : FunnelState
     , error : Maybe String
     }
@@ -101,6 +102,7 @@ init () =
     , value = ""
     , keysString = ""
     , useSimulator = True
+    , wasLoaded = False
     , funnelState = { storage = LocalStorage.initialState prefix }
     , error = Nothing
     }
@@ -133,11 +135,24 @@ funnels =
         ]
 
 
+doIsLoaded : Model -> Model
+doIsLoaded model =
+    if not model.wasLoaded && LocalStorage.isLoaded model.funnelState.storage then
+        { model
+            | useSimulator = False
+            , wasLoaded = True
+        }
+
+    else
+        model
+
+
 storageHandler : LocalStorage.Response -> FunnelState -> Model -> ( Model, Cmd Msg )
 storageHandler response state mdl =
     let
         model =
-            { mdl | funnelState = state }
+            doIsLoaded
+                { mdl | funnelState = state }
     in
     case response of
         LocalStorage.GetResponse { key, value } ->
@@ -220,58 +235,33 @@ update msg modl =
                     (send (LocalStorage.clear model.key) model)
 
         Process value ->
-            case PortFunnel.decodeGenericMessage value of
+            case
+                PortFunnel.processValue funnels
+                    appTrampoline
+                    value
+                    model.funnelState
+                    model
+            of
                 Err error ->
                     { model | error = Just error } |> withNoCmd
 
-                Ok genericMessage ->
-                    let
-                        moduleName =
-                            genericMessage.moduleName
-                    in
-                    case Dict.get moduleName funnels of
-                        Just funnel ->
-                            case funnel of
-                                StorageFunnel appFunnel ->
-                                    let
-                                        ( mdl, cmd ) =
-                                            process genericMessage appFunnel model
-                                    in
-                                    if
-                                        mdl.useSimulator
-                                            && LocalStorage.isLoaded
-                                                mdl.funnelState.storage
-                                    then
-                                        { mdl | useSimulator = False }
-                                            |> withCmd cmd
-
-                                    else
-                                        mdl |> withCmd cmd
-
-                        _ ->
-                            { model
-                                | error =
-                                    Just <|
-                                        "Unknown moduleName: "
-                                            ++ moduleName
-                            }
-                                |> withNoCmd
+                Ok res ->
+                    res
 
 
-process : GenericMessage -> AppFunnel substate message response -> Model -> ( Model, Cmd Msg )
-process genericMessage funnel model =
-    case
-        PortFunnel.appProcess (getCmdPort model)
-            genericMessage
-            funnel
-            model.funnelState
-            model
-    of
-        Err error ->
-            { model | error = Just error } |> withNoCmd
-
-        Ok ( model2, cmd ) ->
-            model2 |> withCmd cmd
+appTrampoline : GenericMessage -> Funnel -> FunnelState -> Model -> Result String ( Model, Cmd Msg )
+appTrampoline genericMessage funnel state model =
+    let
+        theCmdPort =
+            getCmdPort model
+    in
+    case funnel of
+        StorageFunnel storageFunnel ->
+            PortFunnel.appProcess theCmdPort
+                genericMessage
+                storageFunnel
+                state
+                model
 
 
 send : Message -> Model -> Cmd Msg
