@@ -10,7 +10,7 @@
 ----------------------------------------------------------------------
 
 
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser
 import Cmd.Extra exposing (addCmd, addCmds, withCmd, withCmds, withNoCmd)
@@ -20,42 +20,13 @@ import Html.Attributes exposing (href, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as JD
 import Json.Encode as JE exposing (Value)
-import PortFunnel exposing (FunnelSpec, GenericMessage, ModuleDesc, StateAccessors)
 import PortFunnel.LocalStorage as LocalStorage
     exposing
         ( Key
         , Message
         , Response(..)
         )
-
-
-port cmdPort : Value -> Cmd msg
-
-
-port subPort : (Value -> msg) -> Sub msg
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    subPort Process
-
-
-simulatedCmdPort : Value -> Cmd Msg
-simulatedCmdPort =
-    LocalStorage.makeSimulatedCmdPort Process
-
-
-getCmdPort : Model -> (Value -> Cmd Msg)
-getCmdPort model =
-    if model.useSimulator then
-        simulatedCmdPort
-
-    else
-        cmdPort
-
-
-type alias FunnelState =
-    { storage : LocalStorage.State }
+import PortFunnels exposing (FunnelDict, Handler(..))
 
 
 type alias Model =
@@ -64,7 +35,7 @@ type alias Model =
     , keysString : String
     , useSimulator : Bool
     , wasLoaded : Bool
-    , funnelState : FunnelState
+    , funnelState : PortFunnels.State
     , error : Maybe String
     }
 
@@ -90,7 +61,7 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = subscriptions
+        , subscriptions = PortFunnels.subscriptions Process
         }
 
 
@@ -103,36 +74,10 @@ init () =
     , keysString = ""
     , useSimulator = True
     , wasLoaded = False
-    , funnelState = { storage = LocalStorage.initialState prefix }
+    , funnelState = PortFunnels.initialState prefix
     , error = Nothing
     }
         |> withNoCmd
-
-
-storageAccessors : StateAccessors FunnelState LocalStorage.State
-storageAccessors =
-    StateAccessors .storage (\substate state -> { state | storage = substate })
-
-
-type alias AppFunnel substate message response =
-    FunnelSpec FunnelState substate message response Model Msg
-
-
-type Funnel
-    = StorageFunnel (AppFunnel LocalStorage.State LocalStorage.Message LocalStorage.Response)
-
-
-funnels : Dict String Funnel
-funnels =
-    Dict.fromList
-        [ ( LocalStorage.moduleName
-          , StorageFunnel <|
-                FunnelSpec storageAccessors
-                    LocalStorage.moduleDesc
-                    LocalStorage.commander
-                    storageHandler
-          )
-        ]
 
 
 doIsLoaded : Model -> Model
@@ -147,7 +92,7 @@ doIsLoaded model =
         model
 
 
-storageHandler : LocalStorage.Response -> FunnelState -> Model -> ( Model, Cmd Msg )
+storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
 storageHandler response state mdl =
     let
         model =
@@ -236,8 +181,7 @@ update msg modl =
 
         Process value ->
             case
-                PortFunnel.processValue funnels
-                    appTrampoline
+                PortFunnels.processValue funnelDict
                     value
                     model.funnelState
                     model
@@ -249,24 +193,21 @@ update msg modl =
                     res
 
 
-appTrampoline : GenericMessage -> Funnel -> FunnelState -> Model -> Result String ( Model, Cmd Msg )
-appTrampoline genericMessage funnel state model =
-    let
-        theCmdPort =
-            getCmdPort model
-    in
-    case funnel of
-        StorageFunnel storageFunnel ->
-            PortFunnel.appProcess theCmdPort
-                genericMessage
-                storageFunnel
-                state
-                model
+funnelDict : FunnelDict Model Msg
+funnelDict =
+    PortFunnels.makeFunnelDict [ LocalStorageHandler storageHandler ] getCmdPort
+
+
+{-| Get a possibly simulated output port.
+-}
+getCmdPort : String -> Model -> (Value -> Cmd Msg)
+getCmdPort moduleName model =
+    PortFunnels.getCmdPort Process moduleName model.useSimulator
 
 
 send : Message -> Model -> Cmd Msg
 send message model =
-    LocalStorage.send (getCmdPort model)
+    LocalStorage.send (getCmdPort LocalStorage.moduleName model)
         message
         model.funnelState.storage
 
