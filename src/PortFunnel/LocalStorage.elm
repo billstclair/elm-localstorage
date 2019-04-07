@@ -11,15 +11,14 @@
 
 
 module PortFunnel.LocalStorage exposing
-    ( Message, Response(..), State, Key, Prefix, Value
+    ( Message, Response(..), State, Key, Prefix, Value, Label
     , moduleName, moduleDesc, commander
     , initialState
     , send
-    , get, put, listKeys, clear
+    , get, getLabeled, put, listKeys, listKeysLabeled, clear
     , toString, toJsonString
     , makeSimulatedCmdPort
     , isLoaded, getPrefix, encode, decode
-    , Label, getLabeled, listKeysLabeled
     )
 
 {-| The `PortFunnelLocalStorage` uses the JavaScript `localStorage` facility to persistently store key/value pairs.
@@ -29,7 +28,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 
 # Types
 
-@docs Message, Response, State, Key, Prefix, Value
+@docs Message, Response, State, Key, Prefix, Value, Label
 
 
 # Components of a `PortFunnel.FunnelSpec`
@@ -52,7 +51,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 The `Message` type is opaque, so there are functions to create the four messages
 you may pass to `send`.
 
-@docs get, put, listKeys, clear
+@docs get, getLabeled, put, listKeys, listKeysLabeled, clear
 
 
 # Conversion to Strings
