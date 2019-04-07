@@ -9,17 +9,28 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-(function() {
+(function(scope) {
   var moduleName = 'LocalStorage';
-  var sub = PortFunnel.sub;
+  var sub;
 
-  PortFunnel.modules[moduleName].cmd = dispatcher;
+  function init() {
+    var PortFunnel = scope.PortFunnel;
+    if (!PortFunnel || !PortFunnel.sub || !PortFunnel.modules) {
+      // Loop until PortFunnel.js has initialized itself.
+      setTimeout(init, 10);
+      return;
+    }
+    
+    sub = PortFunnel.sub;
+    PortFunnel.modules[moduleName] = { cmd: dispatcher };
 
-  // Let the Elm code know we've started
-  sub.send({ module: moduleName,
-             tag: "startup",
-             args : null
-           });
+    // Let the Elm code know we've started
+    sub.send({ module: moduleName,
+               tag: "startup",
+               args : null
+             });
+  }
+  init();
 
   function dispatcher(tag, args) {
     if (tag == 'get') {
@@ -87,4 +98,4 @@
       }
     } 
   }
-})();   // Execute the enclosing function
+})(this);   // Execute the enclosing function

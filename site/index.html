@@ -2,7 +2,7 @@
 --
 -- index.html
 -- LocalStorage top-level HTML
--- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
+-- Copyright (c) 2018-2019 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
 -- Distributed under the MIT License
 -- See LICENSE.txt
@@ -17,6 +17,7 @@
       -->
     <script type='text/javascript' src='elm.js'></script>
     <script type='text/javascript' src='js/PortFunnel.js'></script>
+    <script type='text/javascript' src='js/PortFunnel/LocalStorage.js'></script>
   </head>
   <body>
     <div id='elm'></div>
@@ -30,18 +31,14 @@ var app = Elm[mainModule].init({
   node: document.getElementById('elm'),
 });
 
-// These are the defaults, so you don't need to pass them.
-// If you need to use something different, they can be passed
-// as the 'portNames' and 'moduleDirectory' properties of
-// the second parameter to PortFunnel.subscribe() below.
-//var portNames = ['cmdPort', 'subPort'];
-//var moduleDirectory = 'js/PortFunnel';
+// These are the defaults, so you don't need to pass them.  If you
+// need to use different port names, you can pass them as the
+// 'portNames' property of the second parameter to
+// PortFunnel.subscribe() below:
+// var portNames = ['cmdPort', 'subPort'];
+// PortFunnel.subscribe(app, { portNames: portNames });
 
-// PortFunnel.subscribe will load js/PortFunnel/<module>.js,
-// for each module in this list.
-var modules = ['LocalStorage'];
-
-PortFunnel.subscribe(app, {modules: modules});
+PortFunnel.subscribe(app);
 
     </script>
   </body>

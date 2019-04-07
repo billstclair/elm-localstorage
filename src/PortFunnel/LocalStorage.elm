@@ -11,7 +11,7 @@
 
 
 module PortFunnel.LocalStorage exposing
-    ( Message, Response(..), State, Key, Prefix, Value, Label
+    ( Message, Response(..), State, Key, Prefix, Value, Label, JSVersion
     , moduleName, moduleDesc, commander
     , initialState
     , send
@@ -28,7 +28,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 
 # Types
 
-@docs Message, Response, State, Key, Prefix, Value, Label
+@docs Message, Response, State, Key, Prefix, Value, Label, JSVersion
 
 
 # Components of a `PortFunnel.FunnelSpec`
@@ -887,3 +887,12 @@ This is sent by the port code after it has initialized. Your code can use this t
 isLoaded : State -> Bool
 isLoaded (State state) =
     state.isLoaded
+
+
+{-| This is used to force a major version bump when the JS changes.
+
+You'll usually not use it for anything.
+
+-}
+type alias JSVersion =
+    { v4_1 : () }
