@@ -2,7 +2,7 @@
 --
 -- LocalStorage.elm
 -- Elm interface to JavaScript's localStorage facility
--- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
+-- Copyright (c) 2018-2019 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
 -- Distributed under the MIT License
 -- See LICENSE.txt
@@ -19,6 +19,7 @@ module PortFunnel.LocalStorage exposing
     , toString, toJsonString
     , makeSimulatedCmdPort
     , isLoaded, getPrefix, encode, decode
+    , Label, getLabeled, listKeysLabeled
     )
 
 {-| The `PortFunnelLocalStorage` uses the JavaScript `localStorage` facility to persistently store key/value pairs.
@@ -96,6 +97,12 @@ type alias Prefix =
     IT.Prefix
 
 
+{-| A convenience type for labels in the store. Same as `Maybe String`.
+-}
+type alias Label =
+    IT.Label
+
+
 {-| Our internal state.
 -}
 type State
@@ -110,8 +117,8 @@ type State
 -}
 type Response
     = NoResponse
-    | GetResponse { key : Key, value : Maybe Value }
-    | ListKeysResponse { prefix : String, keys : List Key }
+    | GetResponse { label : Label, key : Key, value : Maybe Value }
+    | ListKeysResponse { label : Label, prefix : String, keys : List Key }
 
 
 {-| An opaque type that represents a message to send to or receive from the JS code.
@@ -127,7 +134,20 @@ type alias Message =
 -}
 get : Key -> Message
 get =
-    Get
+    Get Nothing
+
+
+{-| Return a `Message` to get a labeled value from local storage.
+
+Sometimes the `Key` alone isn't enough to mark your intention with
+the return value. In this case you can label the return with a string
+you can recognize. It will be returned in the `label` property of the
+`GetResponse`.
+
+-}
+getLabeled : String -> Key -> Message
+getLabeled label =
+    Get (Just label)
 
 
 {-| Return a `Message` to put a value into local storage.
@@ -144,7 +164,20 @@ put =
 -}
 listKeys : Prefix -> Message
 listKeys =
-    ListKeys
+    ListKeys Nothing
+
+
+{-| Return a `Message` to list all keys beginning with a prefix.
+
+Sometimes the `Prefix` alone isn't enough to mark your intention with
+the return value. In this case you can label the return with a string
+you can recognize. It will be returned in the `label` property of the
+`ListKeysResponse`.
+
+-}
+listKeysLabeled : String -> Prefix -> Message
+listKeysLabeled label =
+    ListKeys (Just label)
 
 
 {-| Return a message to remove all keys beginning with a prefix.
@@ -205,6 +238,7 @@ moduleDesc =
 type Tag
     = StartupTag
     | GetTag
+    | GotTag
     | PutTag
     | ListKeysTag
     | KeysTag
@@ -222,6 +256,10 @@ startupTag =
 
 getTag =
     "get"
+
+
+gotTag =
+    "got"
 
 
 putTag =
@@ -261,6 +299,7 @@ tagDict =
     Dict.fromList
         [ ( startupTag, StartupTag )
         , ( getTag, GetTag )
+        , ( gotTag, GotTag )
         , ( putTag, PutTag )
         , ( listKeysTag, ListKeysTag )
         , ( keysTag, KeysTag )
@@ -282,6 +321,28 @@ strtag str =
             NOTAG
 
 
+encodeLabeledString : Label -> String -> String -> Value
+encodeLabeledString label string property =
+    JE.object
+        [ ( "label"
+          , case label of
+                Just lab ->
+                    JE.string lab
+
+                Nothing ->
+                    JE.null
+          )
+        , ( property, JE.string string )
+        ]
+
+
+labeledStringDecoder : String -> Decoder ( Label, String )
+labeledStringDecoder property =
+    JD.map2 Tuple.pair
+        (JD.field "label" <| JD.nullable JD.string)
+        (JD.field property JD.string)
+
+
 {-| Turn a `Message` into a `GenericMessage`.
 -}
 encode : Message -> GenericMessage
@@ -290,8 +351,31 @@ encode message =
         Startup ->
             GenericMessage moduleName startupTag JE.null
 
-        Get key ->
-            GenericMessage moduleName getTag <| JE.string key
+        Get label key ->
+            GenericMessage moduleName getTag <|
+                encodeLabeledString label key "key"
+
+        Got label key value ->
+            GenericMessage moduleName gotTag <|
+                JE.object
+                    [ ( "label"
+                      , case label of
+                            Just lab ->
+                                JE.string lab
+
+                            Nothing ->
+                                JE.null
+                      )
+                    , ( "key", JE.string key )
+                    , ( "value"
+                      , case value of
+                            Nothing ->
+                                JE.null
+
+                            Just v ->
+                                v
+                      )
+                    ]
 
         Put key value ->
             GenericMessage moduleName putTag <|
@@ -307,21 +391,31 @@ encode message =
                       )
                     ]
 
-        ListKeys prefix ->
-            GenericMessage moduleName listKeysTag <| JE.string prefix
+        ListKeys label prefix ->
+            GenericMessage moduleName listKeysTag <|
+                encodeLabeledString label prefix "prefix"
 
-        Keys prefix keys ->
+        Keys label prefix keys ->
             GenericMessage moduleName keysTag <|
                 JE.object
-                    [ ( "prefix", JE.string prefix )
+                    [ ( "label"
+                      , case label of
+                            Just lab ->
+                                JE.string lab
+
+                            Nothing ->
+                                JE.null
+                      )
+                    , ( "prefix", JE.string prefix )
                     , ( "keys", JE.list JE.string keys )
                     ]
 
         Clear prefix ->
             GenericMessage moduleName clearTag <| JE.string prefix
 
-        SimulateGet key ->
-            GenericMessage moduleName simulateGetTag <| JE.string key
+        SimulateGet label key ->
+            GenericMessage moduleName simulateGetTag <|
+                encodeLabeledString label key "key"
 
         SimulatePut key value ->
             GenericMessage moduleName simulatePutTag <|
@@ -337,13 +431,28 @@ encode message =
                       )
                     ]
 
-        SimulateListKeys prefix ->
+        SimulateListKeys label prefix ->
             GenericMessage moduleName simulateListKeysTag <|
-                JE.string prefix
+                encodeLabeledString label prefix "prefix"
 
         SimulateClear prefix ->
             GenericMessage moduleName simulateClearTag <|
                 JE.string prefix
+
+
+type alias GotRecord =
+    { label : Label
+    , key : Key
+    , value : Value
+    }
+
+
+gotDecoder : Decoder GotRecord
+gotDecoder =
+    JD.map3 GotRecord
+        (JD.field "label" <| JD.nullable JD.string)
+        (JD.field "key" JD.string)
+        (JD.field "value" JD.value)
 
 
 type alias PutRecord =
@@ -360,14 +469,16 @@ putDecoder =
 
 
 type alias KeysRecord =
-    { prefix : Key
+    { label : Label
+    , prefix : Key
     , keys : List Key
     }
 
 
 keysDecoder : Decoder KeysRecord
 keysDecoder =
-    JD.map2 KeysRecord
+    JD.map3 KeysRecord
+        (JD.field "label" <| JD.nullable JD.string)
         (JD.field "prefix" JD.string)
         (JD.field "keys" <| JD.list JD.string)
 
@@ -378,12 +489,27 @@ decode : GenericMessage -> Result String Message
 decode { tag, args } =
     case strtag tag of
         GetTag ->
-            case JD.decodeValue JD.string args of
-                Ok key ->
-                    Ok (Get key)
+            case JD.decodeValue (labeledStringDecoder "key") args of
+                Ok ( label, key ) ->
+                    Ok (Get label key)
 
                 Err _ ->
                     Err <| "Get key not a string: " ++ JE.encode 0 args
+
+        GotTag ->
+            case JD.decodeValue gotDecoder args of
+                Ok { label, key, value } ->
+                    Ok
+                        (Got label key <|
+                            if value == JE.null then
+                                Nothing
+
+                            else
+                                Just value
+                        )
+
+                Err _ ->
+                    Err <| "Got not { label, key, value }: " ++ JE.encode 0 args
 
         PutTag ->
             case JD.decodeValue putDecoder args of
@@ -401,17 +527,17 @@ decode { tag, args } =
                     Err <| "Put not { key, value }: " ++ JE.encode 0 args
 
         ListKeysTag ->
-            case JD.decodeValue JD.string args of
-                Ok prefix ->
-                    Ok (ListKeys prefix)
+            case JD.decodeValue (labeledStringDecoder "prefix") args of
+                Ok ( label, prefix ) ->
+                    Ok (ListKeys label prefix)
 
                 Err _ ->
                     Err <| "ListKeys prefix not a string: " ++ JE.encode 0 args
 
         KeysTag ->
             case JD.decodeValue keysDecoder args of
-                Ok { prefix, keys } ->
-                    Ok (Keys prefix keys)
+                Ok { label, prefix, keys } ->
+                    Ok (Keys label prefix keys)
 
                 Err _ ->
                     Err <| "Keys not { prefix, keys }: " ++ JE.encode 0 args
@@ -428,9 +554,9 @@ decode { tag, args } =
             Ok Startup
 
         SimulateGetTag ->
-            case JD.decodeValue JD.string args of
-                Ok key ->
-                    Ok (SimulateGet key)
+            case JD.decodeValue (labeledStringDecoder "key") args of
+                Ok ( label, key ) ->
+                    Ok (SimulateGet label key)
 
                 Err _ ->
                     Err <| "Get key not a string: " ++ JE.encode 0 args
@@ -451,9 +577,9 @@ decode { tag, args } =
                     Err <| "SimulatePut not { key, value }: " ++ JE.encode 0 args
 
         SimulateListKeysTag ->
-            case JD.decodeValue JD.string args of
-                Ok prefix ->
-                    Ok (SimulateListKeys prefix)
+            case JD.decodeValue (labeledStringDecoder "prefix") args of
+                Ok ( label, prefix ) ->
+                    Ok (SimulateListKeys label prefix)
 
                 Err _ ->
                     Err <|
@@ -489,14 +615,14 @@ send wrapper message (State state) =
 
         mess =
             case message of
-                Get key ->
-                    Get (addPrefix prefix key)
+                Get label key ->
+                    Get label (addPrefix prefix key)
 
                 Put key value ->
                     Put (addPrefix prefix key) value
 
-                ListKeys pref ->
-                    ListKeys (addPrefix prefix pref)
+                ListKeys label pref ->
+                    ListKeys label (addPrefix prefix pref)
 
                 Clear pref ->
                     Clear (addPrefix prefix pref)
@@ -510,15 +636,20 @@ send wrapper message (State state) =
 process : Message -> State -> ( State, Response )
 process message ((State state) as boxedState) =
     case message of
-        Put key value ->
+        Got label key value ->
             ( boxedState
-            , GetResponse { key = stripPrefix state.prefix key, value = value }
+            , GetResponse
+                { label = label
+                , key = stripPrefix state.prefix key
+                , value = value
+                }
             )
 
-        Keys prefix keys ->
+        Keys label prefix keys ->
             ( boxedState
             , ListKeysResponse
-                { prefix = stripPrefix state.prefix prefix
+                { label = label
+                , prefix = stripPrefix state.prefix prefix
                 , keys = List.map (stripPrefix state.prefix) keys
                 }
             )
@@ -528,10 +659,11 @@ process message ((State state) as boxedState) =
             , NoResponse
             )
 
-        SimulateGet key ->
+        SimulateGet label key ->
             ( boxedState
             , GetResponse
-                { key = stripPrefix state.prefix key
+                { label = label
+                , key = stripPrefix state.prefix key
                 , value = Dict.get key state.simulationDict
                 }
             )
@@ -550,10 +682,11 @@ process message ((State state) as boxedState) =
             , NoResponse
             )
 
-        SimulateListKeys prefix ->
+        SimulateListKeys label prefix ->
             ( boxedState
             , ListKeysResponse
-                { prefix = stripPrefix state.prefix prefix
+                { label = label
+                , prefix = stripPrefix state.prefix prefix
                 , keys =
                     Dict.foldr
                         (\k _ res ->
@@ -597,14 +730,14 @@ commander _ _ =
 simulator : Message -> Maybe Message
 simulator message =
     case message of
-        Get key ->
-            Just <| SimulateGet key
+        Get label key ->
+            Just <| SimulateGet label key
 
         Put key value ->
             Just <| SimulatePut key value
 
-        ListKeys prefix ->
-            Just <| SimulateListKeys prefix
+        ListKeys label prefix ->
+            Just <| SimulateListKeys label prefix
 
         Clear prefix ->
             Just <| SimulateClear prefix
@@ -622,6 +755,16 @@ makeSimulatedCmdPort =
         simulator
 
 
+labelToString : Label -> String
+labelToString string =
+    case string of
+        Nothing ->
+            "Nothing"
+
+        Just s ->
+            "(Just \"" ++ s ++ "\")"
+
+
 {-| Convert a `Message` to a nice-looking human-readable string.
 -}
 toString : Message -> String
@@ -630,8 +773,23 @@ toString message =
         Startup ->
             "<Startup>"
 
-        Get key ->
-            "<Get \"" ++ key ++ "\">"
+        Get label key ->
+            "<Get " ++ labelToString label ++ " \"" ++ key ++ "\">"
+
+        Got label key value ->
+            "<Get "
+                ++ labelToString label
+                ++ " \""
+                ++ key
+                ++ "\" "
+                ++ (case value of
+                        Nothing ->
+                            "null"
+
+                        Just v ->
+                            JE.encode 0 v
+                   )
+                ++ ">"
 
         Put key value ->
             "<Put \""
@@ -646,11 +804,13 @@ toString message =
                    )
                 ++ ">"
 
-        ListKeys prefix ->
-            "<ListKeys \"" ++ prefix ++ "\">"
+        ListKeys label prefix ->
+            "<ListKeys " ++ labelToString label ++ " \"" ++ prefix ++ "\">"
 
-        Keys prefix keys ->
-            "<Keys \""
+        Keys label prefix keys ->
+            "<Keys "
+                ++ labelToString label
+                ++ " \""
                 ++ prefix
                 ++ "\" ["
                 ++ (List.map (\s -> "\"" ++ s ++ "\"") keys
@@ -662,8 +822,8 @@ toString message =
         Clear prefix ->
             "<Clear \"" ++ prefix ++ "\""
 
-        SimulateGet key ->
-            "<SimulateGet \"" ++ key ++ "\""
+        SimulateGet label key ->
+            "<SimulateGet " ++ labelToString label ++ " \"" ++ key ++ "\""
 
         SimulatePut key value ->
             "<SimulatePut \""
@@ -678,8 +838,8 @@ toString message =
                    )
                 ++ ">"
 
-        SimulateListKeys prefix ->
-            "<SimulateListKeys \"" ++ prefix ++ "\">"
+        SimulateListKeys label prefix ->
+            "<SimulateListKeys " ++ labelToString label ++ " \"" ++ prefix ++ "\">"
 
         SimulateClear prefix ->
             "<SimulateClear \"" ++ prefix ++ "\">"

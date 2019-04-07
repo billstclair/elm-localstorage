@@ -32,6 +32,8 @@ import PortFunnels exposing (FunnelDict, Handler(..))
 type alias Model =
     { key : Key
     , value : String
+    , label : String
+    , returnLabel : String
     , keysString : String
     , useSimulator : Bool
     , wasLoaded : Bool
@@ -48,6 +50,7 @@ prefix =
 type Msg
     = SetKey String
     | SetValue String
+    | SetLabel String
     | GetItem
     | SetItem
     | ListKeys
@@ -71,6 +74,8 @@ init : () -> ( Model, Cmd Msg )
 init () =
     { key = "key"
     , value = ""
+    , label = ""
+    , returnLabel = ""
     , keysString = ""
     , useSimulator = True
     , wasLoaded = False
@@ -100,7 +105,7 @@ storageHandler response state mdl =
                 { mdl | funnelState = state }
     in
     case response of
-        LocalStorage.GetResponse { key, value } ->
+        LocalStorage.GetResponse { label, key, value } ->
             let
                 string =
                     case value of
@@ -110,14 +115,35 @@ storageHandler response state mdl =
                         Just v ->
                             decodeString v
             in
-            { model | key = key, value = string } |> withNoCmd
+            { model
+                | key = key
+                , value = string
+                , returnLabel =
+                    case label of
+                        Nothing ->
+                            "Nothing"
 
-        LocalStorage.ListKeysResponse { keys } ->
+                        Just lab ->
+                            "Just \"" ++ lab ++ "\""
+            }
+                |> withNoCmd
+
+        LocalStorage.ListKeysResponse { label, keys } ->
             let
                 keysString =
                     stringListToString keys
             in
-            { model | keysString = keysString } |> withNoCmd
+            { model
+                | keysString = keysString
+                , returnLabel =
+                    case label of
+                        Nothing ->
+                            "Nothing"
+
+                        Just lab ->
+                            "Just \"" ++ lab ++ "\""
+            }
+                |> withNoCmd
 
         _ ->
             model |> withNoCmd
@@ -149,13 +175,23 @@ update msg modl =
         SetValue value ->
             { model | value = value } |> withNoCmd
 
+        SetLabel label ->
+            { model | label = label } |> withNoCmd
+
         GetItem ->
-            model
-                |> withCmd
-                    (send (LocalStorage.get model.key) model)
+            let
+                message =
+                    if model.label == "" then
+                        LocalStorage.get model.key
+
+                    else
+                        LocalStorage.getLabeled model.label model.key
+            in
+            { model | returnLabel = "" }
+                |> withCmd (send message model)
 
         SetItem ->
-            model
+            { model | returnLabel = "" }
                 |> withCmd
                     (send
                         (LocalStorage.put model.key
@@ -165,17 +201,24 @@ update msg modl =
                     )
 
         ListKeys ->
-            model
-                |> withCmd
-                    (send (LocalStorage.listKeys model.key) model)
+            let
+                message =
+                    if model.label == "" then
+                        LocalStorage.listKeys model.key
+
+                    else
+                        LocalStorage.listKeysLabeled model.label model.key
+            in
+            { model | returnLabel = "" }
+                |> withCmd (send message model)
 
         RemoveItem ->
-            model
+            { model | returnLabel = "" }
                 |> withCmd
                     (send (LocalStorage.put model.key Nothing) model)
 
         Clear ->
-            model
+            { model | returnLabel = "" }
                 |> withCmd
                     (send (LocalStorage.clear model.key) model)
 
@@ -267,6 +310,26 @@ view model =
                         [ input
                             [ value model.value
                             , onInput SetValue
+                            ]
+                            []
+                        ]
+                    ]
+                , tr []
+                    [ td [] [ b "Label: " ]
+                    , td []
+                        [ input
+                            [ value model.label
+                            , onInput SetLabel
+                            ]
+                            []
+                        ]
+                    ]
+                , tr []
+                    [ td [] [ b "Return Label: " ]
+                    , td []
+                        [ input
+                            [ value model.returnLabel
+                            , onInput SetLabel
                             ]
                             []
                         ]
