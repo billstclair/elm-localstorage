@@ -26,7 +26,7 @@
 //
 // When each `module` JavaScript file is loaded.  It should set
 // `PortFunnel.modules['moduleName']`, as illustrated in
-// `PortFunnel/WebSocket.js`,so that it can be hooked in to the
+// `PortFunnel/LocalStorage.js`,so that it can be hooked in to the
 // funnelling mechanism below.
 //
 //////////////////////////////////////////////////////////////////////
