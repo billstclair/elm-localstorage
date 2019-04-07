@@ -384,6 +384,8 @@ view model =
                 , text "Enter a key and press 'List' to list all saved keys beginninng with that prefix."
                 , br
                 , text "Enter a key and press 'Clear' to remove all key/value pairs beginning with that prefix."
+                , br
+                , text "If you enter a 'Label' for 'Get' or 'List', it will be returned in 'Return Label'"
                 ]
             , a [ href "https://github.com/billstclair/elm-localstorage" ]
                 [ text "Source at GitHub" ]
