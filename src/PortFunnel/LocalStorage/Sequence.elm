@@ -7,6 +7,9 @@
 -- Distributed under the MIT License
 -- See LICENSE.txt
 --
+-- Began life in githhub.com/billstclair/zapmeme
+-- History: https://github.com/billstclair/zapmeme/commits/d5b3fd1f990589fc064c64ce58afdfe8a95d8a0e/src/PortFunnel/LocalStorage/Sequence.elm
+--
 ----------------------------------------------------------------------
 
 
