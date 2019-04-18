@@ -16,15 +16,30 @@ module PortFunnel.LocalStorage.Sequence exposing
     , makeLocalStorageStates, makeNullState
     , update, processStates, process
     , send, inject, injectTask
-    , getState, setState, getFullState, setStateOnly
-    , dbResponseToValue, decodeExpectedDbGot, decodePair, encodePair
+    , getState, getFullState, setState, setStateOnly
+    , decodeExpectedDbGot, dbResponseToValue, decodePair, encodePair
     )
 
 {-| Make it easier to create complex state machines from `LocalStorage` contents.
 
 This is too complicated for an example here, but see [ZapMeme.Sequencer](https://github.com/billstclair/zapmeme/blob/master/src/ZapMeme/Sequencer.elm) for a real-life example.
 
-This does not support simulated `LocalStorage`. Certainly possible, but it's already plenty complicated without that.
+This does not support simulated `LocalStorage`. Certainly possible, but it was already plenty complicated without that.
+
+Since an instance of `LocalStorageStates` is stored in your `Model`, and it contains two functions which take a `model` as argument, there needs to be a custom class to prevent infinite type recursion:
+
+    type WrappedModel =
+        WrappedModel Model
+
+    type alias Model =
+        { localStorageStates : LocalStorageStates WrappedModel Msg
+        , ...
+        }
+
+    type Msg =
+        SequenceDone (WrappedModel -> ( WrappedModel, Cmd Msg ))
+        | ProcessLocalStorage Value
+        ...
 
 
 # Types
@@ -45,19 +60,19 @@ You will usually use only `update`, but the others let you do lower-level proces
 @docs update, processStates, process
 
 
-# LocalStorage interaction outside of `State.process`
+# LocalStorage interaction.
 
 @docs send, inject, injectTask
 
 
 # State accessors
 
-@docs getState, setState, getFullState, setStateOnly
+@docs getState, getFullState, setState, setStateOnly
 
 
 # Utilities
 
-@docs dbResponseToValue, decodeExpectedDbGot, decodePair, encodePair
+@docs decodeExpectedDbGot, dbResponseToValue, decodePair, encodePair
 
 -}
 
@@ -69,10 +84,7 @@ import PortFunnel.LocalStorage as LocalStorage
 import Task exposing (Task)
 
 
-{-| These are converted to and from the strings sent as LocalStorage keys
-
-by `encodePair` and `decodePair`.
-
+{-| These are converted to and from the strings sent as LocalStorage keys by `encodePair` and `decodePair`.
 -}
 type alias KeyPair =
     { prefix : String
@@ -104,7 +116,7 @@ type DbRequest msg
 
 {-| A high-level represenation of a message returned from LocalStorage through the subscription port.
 
-Since this module doesn't support simulated storage, only `DbGot` in response to `DbGet` and `DbKeys` in response to `DbListKeys` need to be distringuished.
+Since this module doesn't support simulated storage, only `DbGot` in response to `DbGet` and `DbKeys` in response to `DbListKeys` need to be distinguished.
 
 The other messages are all turned into `DbNoResponse`, but there wont be any in a non-simulated environment.
 
@@ -162,6 +174,13 @@ makeNullState state =
         }
 
 
+{-| Process a response for a single `State`.
+
+If the response's `label` matches the `State`'s, calls `state.process`, updates the user `state` inside the `State`, and turns the returned `DbRequest` into a `Cmd msg` (usually by calling `send`). Otherwise, returns `Nothing`.
+
+You will usually call this indirectly, via `update`.
+
+-}
 process : Wrappers key state model msg -> LocalStorage.Response -> State key state model msg -> Maybe ( State key state model msg, Cmd msg )
 process wrappers response state =
     let
@@ -174,17 +193,13 @@ process wrappers response state =
     else
         let
             dbResponse =
-                Debug.log "process" <| responseThunk ()
+                responseThunk ()
 
             ( request, state2 ) =
                 state.process wrappers dbResponse state.state
         in
         Just
-            ( if state2 == state.state then
-                state
-
-              else
-                { state | state = state2 }
+            ( { state | state = state2 }
             , case request of
                 DbCustomRequest cmd ->
                     cmd
@@ -221,6 +236,13 @@ flattenBatchList requests =
     loop requests []
 
 
+{-| Turn a `DbRequest` into a `Cmd msg`
+
+that sends a `LocalStorage.Message` out to the JavaScript through the `Cmd` port.
+
+Uses the `sender` in `Wrappers` and `label` in `State`.
+
+-}
 send : Wrappers key state model msg -> State key state model msg -> DbRequest msg -> Cmd msg
 send wrappers state request =
     if isNullState state then
@@ -229,12 +251,27 @@ send wrappers state request =
     else
         case requestToMessage state.label request of
             Just req ->
-                wrappers.sender <| Debug.log "send" req
+                wrappers.sender req
 
             Nothing ->
                 Cmd.none
 
 
+{-| Eliminate error checking boilerplate inside `State` `process` functions.
+
+    decodeExpectedDbGot decoder expectedSubkey response
+
+If `response` is not a `DbGot`, returns Nothing.
+
+If `expectedSubkey` is not `""`, and also not the `subkey` of that `DbGot`'s `KeyPair`, returns `Just (KeyPair, Nothing)`.
+
+If the `DbGot`'s value is `Nothing`, returns `Just (KeyPair, Nothing)`.
+
+Otherwise, uses `decoder` to decode that value. If the result is an `Err`, returns `Just (KeyPair, Nothing)`.
+
+If all goes well, returns `Just (KeyPair, value)`.
+
+-}
 decodeExpectedDbGot : Decoder value -> String -> DbResponse -> Maybe ( KeyPair, Maybe value )
 decodeExpectedDbGot decoder expectedSubkey response =
     case response of
@@ -304,6 +341,11 @@ requestToMessage label request =
             Nothing
 
 
+{-| Turn a `KeyPair` into a string.
+
+That string is used as the `Key` arg to `LocalStorage.getLabeled` or the `Prefix` arg to `LocalStorage.listKeysLabeled`.
+
+-}
 encodePair : KeyPair -> String
 encodePair { prefix, subkey } =
     if prefix == "" then
@@ -324,6 +366,11 @@ encodePair { prefix, subkey } =
         prefix ++ suffix
 
 
+{-| Turn a string that comes back from the subscription port into a `KeyPair`.
+
+Splits it on the first ".".
+
+-}
 decodePair : String -> KeyPair
 decodePair key =
     case String.split "." key of
@@ -391,9 +438,7 @@ dbResponseToValue prefix label response =
             dbResponseToValue prefix label <| DbGot (KeyPair "" "") Nothing
 
 
-{-| If you receive something outside of a LocalStorage return,
-
-and want to get it back into your state machine, use this.
+{-| If you receive something outside of a LocalStorage return, and want to get it back into your state machine, use this.
 
 It returns a `Task` that, if you send it with your LocalStorage `sub` port message, will make it seem as if the given DbResponse was received from LocalStorage.
 
@@ -450,17 +495,21 @@ type alias Injector msg =
             message
             funnelState.storage
 
-`localStorageStates` and `setLocalStorageStates` are functions that read/write a `LocalStorageStates` insteance from/to your `Model`.
+`localStorageStates` and `setLocalStorageStates` are functions that read/write a `LocalStorageStates` from/to your `Model`.
 
 `sequenceDone` creates a `Msg` that calls its arg with the Model, and expects back the standard `update` result. E.g.:
 
     type Msg
-       = SequenceDone (Model -> (Model, Cmd Msg))
+       = SequenceDone (WrappedModel -> (WrappedModel, Cmd Msg))
        ...
 
     update model msg =
        SequenceDone updater ->
-           updater model
+            let
+                ( WrappedModel mdl, cmd ) =
+                    updater (WrappedModel model)
+            in
+            ( mdl, cmd )
        ...
 
 Make a `NullState` with `makeNullState`.
@@ -494,6 +543,8 @@ The `key` type is usually a simple enumerator custom type. You could use strings
 
 The `state` type is usually a custom type with one tag per `key` value.
 
+the `model` here is usually `WrappedModel` in your code, to prevent type recursion through `wrappers.localStorageStates` and `wrappers.setLocalStorageStates`.
+
 -}
 makeLocalStorageStates : Wrappers key state model msg -> List ( key, State key state model msg ) -> LocalStorageStates key state model msg
 makeLocalStorageStates wrappers states =
@@ -508,6 +559,8 @@ getWrappers (LocalStorageStates states) =
     states.wrappers
 
 
+{-| Look up the `State` associated with `key` in `model`'s `LocalStorageStates`
+-}
 getFullState : Wrappers key state model msg -> key -> model -> Maybe (State key state model msg)
 getFullState wrappers key model =
     let
@@ -517,6 +570,11 @@ getFullState wrappers key model =
     AssocList.get key states.table
 
 
+{-| Look up the `State` associated with `key` in `model`'s `LocalStorageStates`
+
+(with `getFullState`). If found, return its`state` field.
+
+-}
 getState : Wrappers key state model msg -> key -> model -> Maybe state
 getState wrappers key model =
     case getFullState wrappers key model of
@@ -536,6 +594,13 @@ nullState wrappers =
     state
 
 
+{-| Update one `State` inside the `LocalStorageStates` inside of the `model`.
+
+Return the updated `model`.
+
+Use `setState` if you also need the updated `State` (or call `getFullState`).
+
+-}
 setStateOnly : Wrappers key state model msg -> key -> state -> model -> model
 setStateOnly wrappers key stateState model =
     let
@@ -545,6 +610,13 @@ setStateOnly wrappers key stateState model =
     res
 
 
+{-| Update one `State` inside the `LocalStorageStates` inside of the `model`.
+
+Returns the updated `model` and `State`. This version is usually used when you start up a state machine, since you need the `State` to call `send`.
+
+Use `setStateOnly` if you need only the updated `model`.
+
+-}
 setState : Wrappers key state model msg -> key -> state -> model -> ( model, State key state model msg )
 setState wrappers key stateState model =
     let
@@ -570,6 +642,13 @@ setState wrappers key stateState model =
             )
 
 
+{-| Calls `process` on each of the `State`s registered in the `LocalStorageStates`.
+
+Accumulates the results, but in practice, only one of them will do anything other than note that the `LocalStorage.Response`'s `label` doesn't match, and return the `model` unchanged with `Cmd.none`.
+
+You will usually call this via `update`, not directly.
+
+-}
 processStates : LocalStorage.Response -> LocalStorageStates key state model msg -> ( LocalStorageStates key state model msg, Cmd msg )
 processStates response (LocalStorageStates states) =
     let
@@ -592,7 +671,25 @@ processStates response (LocalStorageStates states) =
     ( LocalStorageStates states2, cmd )
 
 
-{-| TODO
+{-| Modulo wrapping and unwrapping, designed to be the entire handler for incoming LocalStorage responses.
+
+    funnelDict : FunnelDict Model Msg
+    funnelDict =
+        PortFunnels.makeFunnelDict
+            [ LocalStorageHandler wrappedStorageHandler ]
+            getCmdPort
+
+    wrappedStorageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
+    wrappedStorageHandler response _ model =
+        let
+            ( WrappedModel mdl, cmd ) =
+                Sequence.storageHandler
+                    sequenceWrappers
+                    (WrappedModel model)
+                    response
+        in
+        ( mdl, cmd )
+
 -}
 update : Wrappers key state model msg -> model -> LocalStorage.Response -> ( model, Cmd msg )
 update wrappers model response =
