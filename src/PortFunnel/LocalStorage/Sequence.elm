@@ -10,6 +10,8 @@
 -- Began life in githhub.com/billstclair/zapmeme
 -- History: https://github.com/billstclair/zapmeme/commits/d5b3fd1f990589fc064c64ce58afdfe8a95d8a0e/src/PortFunnel/LocalStorage/Sequence.elm
 --
+-- Removed: https://github.com/billstclair/zapmeme/commit/fa2de5da67813b180f932d167ac2df479177e3a1
+--
 ----------------------------------------------------------------------
 
 
