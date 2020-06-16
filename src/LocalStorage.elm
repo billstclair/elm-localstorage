@@ -16,33 +16,12 @@ import Json.Decode as JD
 import Json.Encode as JE
 
 
-type alias Value =
-    JE.Value
-
-
-type alias DictState =
-    Dict String Value
-
-
-emptyDictState : DictState
-emptyDictState =
-    Dict.empty
-
-
-type Operation
-    = GetItemOperation
-    | SetItemOperation
-    | ClearOperation
-    | ListKeysOperation
-    | ErrorOperation
-
-
 type alias GetItemPort msg =
     String -> Cmd msg
 
 
 type alias SetItemPort msg =
-    ( String, Value ) -> Cmd msg
+    ( String, JE.Value ) -> Cmd msg
 
 
 type alias ClearPort msg =
@@ -54,17 +33,25 @@ type alias ListKeysPort msg =
 
 
 type alias ReceiveItemPort msg =
-    (Value -> msg) -> Sub msg
+    (JE.Value -> msg) -> Sub msg
 
 
-kvDecoder : String -> JD.Decoder ( String, Value )
+type Operation
+    = GetItemOperation
+    | SetItemOperation
+    | ClearOperation
+    | ListKeysOperation
+    | ErrorOperation
+
+
+kvDecoder : String -> JD.Decoder ( String, JE.Value )
 kvDecoder prefix =
     JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "key" JD.string)
         (JD.field "value" JD.value)
 
 
-keysDecoder : String -> JD.Decoder ( String, Value )
+keysDecoder : String -> JD.Decoder ( String, JE.Value )
 keysDecoder prefix =
     JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
@@ -73,14 +60,14 @@ keysDecoder prefix =
         )
 
 
-encodeKeyList : String -> List String -> Value
+encodeKeyList : String -> List String -> JE.Value
 encodeKeyList prefix keys =
     List.map (stripPrefix prefix) keys
         |> List.map JE.string
         |> JE.list identity
 
 
-decodeStringList : Value -> Result String (List String)
+decodeStringList : JE.Value -> Result String (List String)
 decodeStringList value =
     case JD.decodeValue (JD.list JD.string) value of
         Err err ->
@@ -113,7 +100,7 @@ addPrefix prefix key =
         prefix ++ "." ++ key
 
 
-receiveWrapper : MsgWrapper msg -> String -> Value -> msg
+receiveWrapper : MsgWrapper msg -> String -> JE.Value -> msg
 receiveWrapper wrapper prefix json =
     case JD.decodeValue (kvDecoder prefix) json of
         Ok ( key, value ) ->
@@ -132,7 +119,7 @@ receiveWrapper wrapper prefix json =
 
 
 type alias MsgWrapper msg =
-    Operation -> Maybe (Ports msg) -> String -> Value -> msg
+    Operation -> Maybe (Ports msg) -> String -> JE.Value -> msg
 
 
 type Ports msg
@@ -141,7 +128,7 @@ type Ports msg
         , setItem : Ports msg -> SetItemPort msg
         , clear : Ports msg -> ClearPort msg
         , listKeys : Ports msg -> ListKeysPort msg
-        , state : DictState
+        , state : Dict String JE.Value
         }
 
 
@@ -176,7 +163,7 @@ makeRealPorts getPort setPort clearPort listKeysPort =
         , setItem = \_ -> setPort
         , clear = \_ -> clearPort
         , listKeys = \_ -> listKeysPort
-        , state = emptyDictState
+        , state = Dict.empty
         }
 
 
@@ -187,7 +174,7 @@ getItem (LocalStorage ( ports, prefix )) key =
             p.getItem ports (addPrefix prefix key)
 
 
-setItem : LocalStorage msg -> String -> Value -> Cmd msg
+setItem : LocalStorage msg -> String -> JE.Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
         Ports p ->
