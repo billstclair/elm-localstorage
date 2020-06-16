@@ -1,3 +1,0 @@
-#!/bin/bash
-
-elm make PortExample.elm --output site/index.js
