@@ -1,9 +1,9 @@
 {
     "type": "package",
-    "name": "billstclair/elm-localstorage",
+    "name": "the-sett/elm-localstorage",
     "summary": "elm-localstorage provides persistence via JavaScript's localStorage.",
     "license": "MIT",
-    "version": "4.0.3",
+    "version": "1.0.0",
     "exposed-modules": [
         "LocalStorage",
         "LocalStorage.SharedTypes",
