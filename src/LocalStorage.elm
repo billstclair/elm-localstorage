@@ -1,77 +1,34 @@
-----------------------------------------------------------------------
---
--- LocalStorage.elm
--- Elm interface to JavaScript's localStorage facility
--- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
--- Some rights reserved.
--- Distributed under the MIT License
--- See LICENSE.txt
---
-----------------------------------------------------------------------
-
-
 module LocalStorage exposing
     ( LocalStorage
-    , make, makeRealPorts
-    , getItem, setItem, clear, listKeys
-    , getPorts, setPorts, getPrefix
+    , clear
+    , getItem
+    , getPorts
+    , getPrefix
+    , listKeys
+    , make
+    , makeRealPorts
+    , setItem
+    , setPorts
     )
-
-{-| The 'LocalStorage' module does most of the work in using the JavaScript `localStorage` facility to persistently store key/value pairs.
-
-
-# Types
-
-@docs LocalStorage
-
-
-# Constructors
-
-@docs make, makeRealPorts
-
-
-# Functions
-
-@docs getItem, setItem, clear, listKeys
-
-
-# State accessors
-
-@docs getPorts, setPorts, getPrefix
-
--}
 
 import Dict exposing (Dict)
 import Json.Decode as JD
 import Json.Encode as JE
 
 
-{-| A convenience type for values in the store. Same as `Json.Encode.Value`.
--}
 type alias Value =
     JE.Value
 
 
-{-| A `Dict` that stores key/value pairs for the simulated ports.
--}
 type alias DictState =
     Dict String Value
 
 
-{-| `Dict.empty`
--}
 emptyDictState : DictState
 emptyDictState =
     Dict.empty
 
 
-{-| The operation that caused your wrapper `Msg` to be sent.
-
-For real ports, you'll only ever see GetItemOperation.
-
-For simluated ports, you'll see the others as well, because you have to save the updated state.
-
--}
 type Operation
     = GetItemOperation
     | SetItemOperation
@@ -80,32 +37,22 @@ type Operation
     | ErrorOperation
 
 
-{-| The required signature of your `localStorage.getItem` port.
--}
 type alias GetItemPort msg =
     String -> Cmd msg
 
 
-{-| The required signature of your `localStorage.setItem` port.
--}
 type alias SetItemPort msg =
     ( String, Value ) -> Cmd msg
 
 
-{-| The required signature of your `localStorage.clear` port.
--}
 type alias ClearPort msg =
     String -> Cmd msg
 
 
-{-| The required signature of your `localStorage.list` port.
--}
 type alias ListKeysPort msg =
     String -> Cmd msg
 
 
-{-| The required signature of your subscription to receive `getItem` values.
--}
 type alias ReceiveItemPort msg =
     (Value -> msg) -> Sub msg
 
@@ -133,11 +80,6 @@ encodeKeyList prefix keys =
         |> JE.list identity
 
 
-{-| Decode a Value representing a list of strings.
-
-Useful for the result of `LocalStorage.listKeys`.
-
--}
 decodeStringList : Value -> Result String (List String)
 decodeStringList value =
     case JD.decodeValue (JD.list JD.string) value of
@@ -148,8 +90,6 @@ decodeStringList value =
             Ok list
 
 
-{-| Drop the length of the first arg from the left of the second.
--}
 stripPrefix : String -> String -> String
 stripPrefix prefix key =
     let
@@ -164,8 +104,6 @@ stripPrefix prefix key =
     String.dropLeft len key
 
 
-{-| Prepend the `String` and a period to the `String`, or nothing if the `String` is empty.
--}
 addPrefix : String -> String -> String
 addPrefix prefix key =
     if prefix == "" then
@@ -175,8 +113,6 @@ addPrefix prefix key =
         prefix ++ "." ++ key
 
 
-{-| Use this to turn the Value coming from a receive port into a Msg.
--}
 receiveWrapper : MsgWrapper msg -> String -> Value -> msg
 receiveWrapper wrapper prefix json =
     case JD.decodeValue (kvDecoder prefix) json of
@@ -195,24 +131,10 @@ receiveWrapper wrapper prefix json =
                         JE.null
 
 
-{-| Your Msg, which wraps the key/value pair from a `getItem` return.
-
-For real ports, you'll only care about the `GetItem` operation. You'll get `Nothing` for the `Ports`.
-
-For simluated ports, you need to store the `Ports` in your `Model`.
-
--}
 type alias MsgWrapper msg =
     Operation -> Maybe (Ports msg) -> String -> Value -> msg
 
 
-{-| Wrap up your ports.
-
-You'll usually create one of these with `LocalStorage.realRealPorts` or `DictPorts.make`.
-
-Your update Msg will receive one, if you're using simulated ports.
-
--}
 type Ports msg
     = Ports
         { getItem : Ports msg -> GetItemPort msg
@@ -223,46 +145,30 @@ type Ports msg
         }
 
 
-{-| Opaque type. Returned by `make` and `getPorts`. Passed to the other functions.
--}
 type LocalStorage msg
     = LocalStorage ( Ports msg, String )
 
 
-{-| Return the `Ports` instance you passed to `make` or `setPorts`.
--}
 getPorts : LocalStorage msg -> Ports msg
 getPorts (LocalStorage ( ports, _ )) =
     ports
 
 
-{-| Set the internal `Ports` value. Fetch it back with `getPorts`.
--}
 setPorts : Ports msg -> LocalStorage msg -> LocalStorage msg
 setPorts ports (LocalStorage ( _, prefix )) =
     LocalStorage ( ports, prefix )
 
 
-{-| Get the prefix passed to `make`
--}
 getPrefix : LocalStorage msg -> String
 getPrefix (LocalStorage ( _, prefix )) =
     prefix
 
 
-{-| Make a `LocalStorage` instance.
-
-If `prefix` is not empty (""), will prefix all keys in JS `localStorage` with
-`prefix ++ "."`.
-
--}
 make : Ports msg -> String -> LocalStorage msg
 make ports prefix =
     LocalStorage ( ports, prefix )
 
 
-{-| Create a `Ports` value, using what are usually your real Elm `port`s.
--}
 makeRealPorts : GetItemPort msg -> SetItemPort msg -> ClearPort msg -> ListKeysPort msg -> Ports msg
 makeRealPorts getPort setPort clearPort listKeysPort =
     Ports
@@ -274,8 +180,6 @@ makeRealPorts getPort setPort clearPort listKeysPort =
         }
 
 
-{-| Return a `Cmd` to fetch the value for the `String` from `LocalStorage`.
--}
 getItem : LocalStorage msg -> String -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
     case ports of
@@ -283,8 +187,6 @@ getItem (LocalStorage ( ports, prefix )) key =
             p.getItem ports (addPrefix prefix key)
 
 
-{-| Return a `Cmd` to set the value for the `String` to `Value` in `LocalStorage`.
--}
 setItem : LocalStorage msg -> String -> Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
@@ -292,8 +194,6 @@ setItem (LocalStorage ( ports, prefix )) key value =
             p.setItem ports ( addPrefix prefix key, value )
 
 
-{-| Return a `Cmd` to clear all JS `localStorage` keys that begin with the `prefix` passed to `make`.
--}
 clear : LocalStorage msg -> Cmd msg
 clear (LocalStorage ( ports, prefix )) =
     case ports of
@@ -301,8 +201,6 @@ clear (LocalStorage ( ports, prefix )) =
             p.clear ports <| addPrefix prefix ""
 
 
-{-| Return a `Cmd` to list all JS `localStorage` keys that begin with the `prefix` passed to `make` followed by the String you pass here.
--}
 listKeys : LocalStorage msg -> String -> Cmd msg
 listKeys (LocalStorage ( ports, prefix )) userPrefix =
     case ports of
