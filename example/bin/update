@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# This script compiles the Elm code into JS, and uploads it to my example site.
-# It is probably not useful to anybody else.
-
-elm make Main.elm --output site/elm.js
+elm-make PortExample.elm --output site/index.js
 cd site
 rsyncit

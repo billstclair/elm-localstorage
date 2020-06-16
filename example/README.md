@@ -1,18 +1,19 @@
 This directory contains an example of using the `LocalStorage` module.
 
-You can run the example with simulated local storage with:
+There are two top-level application files:
 
-    git clone git@github.com:billstclair/elm-localstorage.git
-    cd elm-localstorage/example
+1. ReactorExample.elm uses simulated ports to enable testing the code in elm reactor.
+
+ To start it:
+
+    cd .../elm-localstorage/example
     elm reactor
 
-Then aim your browser at http://localhost:8000/Main.elm
+ Then aim your browser at http://localhost:8000/ReactorExample.elm
 
-You can build `site/elm.js`, which is required by `site/index.html`, with:
+2. PortExample.elm uses real ports, via `site/index.html` and `site/js/localStoragePorts.js`.
+
+ You can build `site/index.js`, which is required by `site/index.html`, with:
 
     cd .../elm-localstorage/example
     bin/build
-
-Then aim your browser at file:///.../elm-localstorage/example/site/index.html
-
-Or run `elm reactor` as above, and aim your browser at http://localhost:8000/site/index.html

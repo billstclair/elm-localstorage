@@ -2,7 +2,7 @@
 --
 -- index.html
 -- LocalStorage top-level HTML
--- Copyright (c) 2018-2019 Bill St. Clair <billstclair@gmail.com>
+-- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
 -- Distributed under the MIT License
 -- See LICENSE.txt
@@ -11,34 +11,33 @@
 
 <html>
   <head>
-    <title>LocalStorage Example</title>
-    <!-- Compile your Elm application into elm.js. E.g.:
-      -- elm-make PortExample.elm --output site/elm.js
+    <title>Your Title Here</title>
+    <!-- Compile your Elm application into index.js. E.g.:
+      -- elm-make PortExample.elm --output site/index.js
       -->
-    <script type='text/javascript' src='elm.js'></script>
-    <script type='text/javascript' src='js/PortFunnel.js'></script>
-    <script type='text/javascript' src='js/PortFunnel/LocalStorage.js'></script>
+    <script type='text/javascript' src='index.js'></script>
+    <script type='text/javascript' src='js/ElmLocalStoragePorts.js'></script>
   </head>
   <body>
     <div id='elm'></div>
     <script type='text/javascript'>
 
-// Initialize the name of your main module here
-// Change "Main" to your application's module name.
-var mainModule = 'Main';
+// Read your saved model here, if you have one.
+// Or do it in your init function, via getItem.
+var initialModel = null;
 
-var app = Elm[mainModule].init({
+// Change "PortExample" to your application's module name.
+var app = Elm.PortExample.init({
   node: document.getElementById('elm'),
+  flags: initialModel
 });
 
-// These are the defaults, so you don't need to pass them.  If you
-// need to use different port names, you can pass them as the
-// 'portNames' property of the second parameter to
-// PortFunnel.subscribe() below:
-// var portNames = ['cmdPort', 'subPort'];
-// PortFunnel.subscribe(app, { portNames: portNames });
+ElmLocalStoragePorts.subscribe(app);
 
-PortFunnel.subscribe(app);
+// If you use non-standard names for the ports, you need to name them:
+//
+// ElmLocalStoragePorts.subscribe(app, "getItem", "setItem", "clear", "receiveItem", "listKeys");
+//
 
     </script>
   </body>

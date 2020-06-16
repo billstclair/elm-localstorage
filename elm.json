@@ -3,21 +3,17 @@
     "name": "billstclair/elm-localstorage",
     "summary": "elm-localstorage provides persistence via JavaScript's localStorage.",
     "license": "MIT",
-    "version": "7.2.0",
+    "version": "4.0.3",
     "exposed-modules": [
-        "PortFunnel.LocalStorage",
-        "PortFunnel.LocalStorage.Sequence"
+        "LocalStorage",
+        "LocalStorage.SharedTypes",
+        "LocalStorage.DictPorts"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {
-        "billstclair/elm-port-funnel": "1.1.1 <= v < 2.0.0",
         "elm/core": "1.0.0 <= v < 2.0.0",
         "elm/html": "1.0.0 <= v < 2.0.0",
-        "elm/json": "1.0.0 <= v < 2.0.0",
-        "elm-community/dict-extra": "2.3.1 <= v < 3.0.0",
-        "pzp1997/assoc-list": "1.0.0 <= v < 2.0.0"
+        "elm/json": "1.0.0 <= v < 2.0.0"
     },
-    "test-dependencies": {
-        "elm-explorations/test": "1.0.0 <= v < 2.0.0"
-    }
+    "test-dependencies": {}
 }
