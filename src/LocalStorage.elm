@@ -46,12 +46,6 @@ import Json.Decode as JD
 import Json.Encode as JE
 
 
-{-| A convenience type for keys in the store. Same as `String`.
--}
-type alias Key =
-    String
-
-
 {-| A convenience type for values in the store. Same as `Json.Encode.Value`.
 -}
 type alias Value =
@@ -61,7 +55,7 @@ type alias Value =
 {-| A `Dict` that stores key/value pairs for the simulated ports.
 -}
 type alias DictState =
-    Dict Key Value
+    Dict String Value
 
 
 {-| `Dict.empty`
@@ -89,13 +83,13 @@ type Operation
 {-| The required signature of your `localStorage.getItem` port.
 -}
 type alias GetItemPort msg =
-    Key -> Cmd msg
+    String -> Cmd msg
 
 
 {-| The required signature of your `localStorage.setItem` port.
 -}
 type alias SetItemPort msg =
-    ( Key, Value ) -> Cmd msg
+    ( String, Value ) -> Cmd msg
 
 
 {-| The required signature of your `localStorage.clear` port.
@@ -116,14 +110,14 @@ type alias ReceiveItemPort msg =
     (Value -> msg) -> Sub msg
 
 
-kvDecoder : String -> JD.Decoder ( Key, Value )
+kvDecoder : String -> JD.Decoder ( String, Value )
 kvDecoder prefix =
     JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "key" JD.string)
         (JD.field "value" JD.value)
 
 
-keysDecoder : String -> JD.Decoder ( Key, Value )
+keysDecoder : String -> JD.Decoder ( String, Value )
 keysDecoder prefix =
     JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
@@ -156,7 +150,7 @@ decodeStringList value =
 
 {-| Drop the length of the first arg from the left of the second.
 -}
-stripPrefix : String -> Key -> String
+stripPrefix : String -> String -> String
 stripPrefix prefix key =
     let
         len =
@@ -170,9 +164,9 @@ stripPrefix prefix key =
     String.dropLeft len key
 
 
-{-| Prepend the `String` and a period to the `Key`, or nothing if the `String` is empty.
+{-| Prepend the `String` and a period to the `String`, or nothing if the `String` is empty.
 -}
-addPrefix : String -> Key -> Key
+addPrefix : String -> String -> String
 addPrefix prefix key =
     if prefix == "" then
         key
@@ -209,7 +203,7 @@ For simluated ports, you need to store the `Ports` in your `Model`.
 
 -}
 type alias MsgWrapper msg =
-    Operation -> Maybe (Ports msg) -> Key -> Value -> msg
+    Operation -> Maybe (Ports msg) -> String -> Value -> msg
 
 
 {-| Wrap up your ports.
@@ -280,18 +274,18 @@ makeRealPorts getPort setPort clearPort listKeysPort =
         }
 
 
-{-| Return a `Cmd` to fetch the value for the `Key` from `LocalStorage`.
+{-| Return a `Cmd` to fetch the value for the `String` from `LocalStorage`.
 -}
-getItem : LocalStorage msg -> Key -> Cmd msg
+getItem : LocalStorage msg -> String -> Cmd msg
 getItem (LocalStorage ( ports, prefix )) key =
     case ports of
         Ports p ->
             p.getItem ports (addPrefix prefix key)
 
 
-{-| Return a `Cmd` to set the value for the `Key` to `Value` in `LocalStorage`.
+{-| Return a `Cmd` to set the value for the `String` to `Value` in `LocalStorage`.
 -}
-setItem : LocalStorage msg -> Key -> Value -> Cmd msg
+setItem : LocalStorage msg -> String -> Value -> Cmd msg
 setItem (LocalStorage ( ports, prefix )) key value =
     case ports of
         Ports p ->
