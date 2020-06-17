@@ -2,7 +2,7 @@ module LocalStorage exposing
     ( ClearPort, GetItemPort, SetItemPort, ListKeysPort, ResponsePort
     , LocalStorage, make
     , clear, getItem, setItem, listKeys
-    , Operation, Response, responseHandler
+    , Operation(..), Response, responseHandler
     )
 
 {-| A minimal local storage API that mirrors the raw API very closely.
