@@ -2,7 +2,7 @@ module LocalStorage exposing
     ( ClearPort, GetItemPort, SetItemPort, ListKeysPort, ResponsePort
     , LocalStorage, make
     , clear, getItem, setItem, listKeys
-    , Operation(..), Response, responseHandler
+    , Response(..), responseHandler
     )
 
 {-| A minimal local storage API that mirrors the raw API very closely.
@@ -25,7 +25,7 @@ module LocalStorage exposing
 
 # Responses from local storage.
 
-@docs Operation, Response, responseHandler
+@docs Response, responseHandler
 
 -}
 
@@ -151,42 +151,27 @@ listKeys (LocalStorage ( ports, prefix )) userPrefix =
 
 {-| The possible local storage operation responses.
 -}
-type Operation
-    = GetItem String JE.Value
+type Response
+    = Item String JE.Value
     | ItemNotFound String
-    | ListKeys (List String)
+    | KeyList (List String)
     | Error String
 
 
-{-| The user supplied response message constructor.
--}
-type alias Response msg =
-    Operation -> msg
-
-
-{-| Creates a response handler to use with the \`\` subscription port.
+{-| Creates a response handler to use with the `ResponsePort` subscription port.
 
 The operation, key and JSON value message builder combined with the storage
 prefix are needed to create a response handler.
 
 -}
-responseHandler : Response msg -> String -> JE.Value -> msg
+responseHandler : (Response -> msg) -> String -> JE.Value -> msg
 responseHandler wrapper prefix json =
-    case JD.decodeValue (kvDecoder prefix) json of
-        Ok ( key, value ) ->
-            if value == JE.null then
-                wrapper (ItemNotFound key)
+    case JD.decodeValue (responseDecoder prefix) json of
+        Ok resp ->
+            wrapper resp
 
-            else
-                wrapper (GetItem key value)
-
-        Err _ ->
-            case JD.decodeValue (keysDecoder prefix) json of
-                Ok ( _, keyList ) ->
-                    wrapper (ListKeys keyList)
-
-                Err err ->
-                    wrapper (Error (JD.errorToString err))
+        Err err ->
+            wrapper (Error (JD.errorToString err))
 
 
 
@@ -216,15 +201,29 @@ stripPrefix prefix key =
     String.dropLeft len key
 
 
-kvDecoder : String -> JD.Decoder ( String, JE.Value )
-kvDecoder prefix =
-    JD.map2 (\a b -> ( a, b ))
+responseDecoder : String -> JD.Decoder Response
+responseDecoder prefix =
+    JD.oneOf
+        [ getItemDecoder prefix
+        , listKeysDecoder prefix
+        ]
+
+
+getItemDecoder : String -> JD.Decoder Response
+getItemDecoder prefix =
+    JD.map2
+        (\k v ->
+            if v == JE.null then
+                ItemNotFound k
+
+            else
+                Item k v
+        )
         (JD.map (stripPrefix prefix) <| JD.field "key" JD.string)
         (JD.field "value" JD.value)
 
 
-keysDecoder : String -> JD.Decoder ( String, List String )
-keysDecoder prefix =
-    JD.map2 (\a b -> ( a, b ))
-        (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
-        (JD.field "keys" (JD.list JD.string))
+listKeysDecoder : String -> JD.Decoder Response
+listKeysDecoder prefix =
+    JD.list JD.string
+        |> JD.map KeyList
