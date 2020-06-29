@@ -1,3 +1,7 @@
+**Contacts for Support**
+- @rupertlssmith on https://elmlang.slack.com
+- @rupert on https://discourse.elm-lang.org
+
 # elm-localstorage
 
 elm-localstorage provides a simple and minimal API for working with local storage.
@@ -20,5 +24,8 @@ npm package. To install the npm package do:
 
 # Origins
 
-Originally published as [billstclair/elm-localstorage](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest) version 4.0.3. The API changed as the package evolved but I preferred the simpler presentation in version 4.x. This package was forked from 4.0.3 and trimmed down to provide a minimal and simple local storage package. Thanks to
-Bill St. Clair for the original work.
+Originally published as [billstclair/elm-localstorage](http://package.elm-lang.org/packages/billstclair/elm-localstorage/latest)
+version 4.0.3. The API changed as the package evolved but I preferred the simpler
+presentation in version 4.x. This package was forked from 4.0.3 and trimmed down
+to provide a minimal and simple local storage package. Thanks to Bill St. Clair
+for the original work.
