@@ -152,17 +152,16 @@ listKeys (LocalStorage ( ports, prefix )) userPrefix =
 {-| The possible local storage operation responses.
 -}
 type Operation
-    = GetItemOperation
-    | SetItemOperation
-    | ClearOperation
-    | ListKeysOperation
-    | ErrorOperation
+    = GetItem String JE.Value
+    | ItemNotFound String
+    | ListKeys (List String)
+    | Error String
 
 
 {-| The user supplied response message constructor.
 -}
 type alias Response msg =
-    Operation -> String -> JE.Value -> msg
+    Operation -> msg
 
 
 {-| Creates a response handler to use with the \`\` subscription port.
@@ -175,15 +174,19 @@ responseHandler : Response msg -> String -> JE.Value -> msg
 responseHandler wrapper prefix json =
     case JD.decodeValue (kvDecoder prefix) json of
         Ok ( key, value ) ->
-            wrapper GetItemOperation key value
+            if value == JE.null then
+                wrapper (ItemNotFound key)
+
+            else
+                wrapper (GetItem key value)
 
         Err _ ->
             case JD.decodeValue (keysDecoder prefix) json of
-                Ok ( key, value ) ->
-                    wrapper ListKeysOperation key value
+                Ok ( _, keyList ) ->
+                    wrapper (ListKeys keyList)
 
                 Err err ->
-                    wrapper ErrorOperation (JD.errorToString err) JE.null
+                    wrapper (Error (JD.errorToString err))
 
 
 
@@ -220,17 +223,8 @@ kvDecoder prefix =
         (JD.field "value" JD.value)
 
 
-keysDecoder : String -> JD.Decoder ( String, JE.Value )
+keysDecoder : String -> JD.Decoder ( String, List String )
 keysDecoder prefix =
     JD.map2 (\a b -> ( a, b ))
         (JD.map (stripPrefix prefix) <| JD.field "prefix" JD.string)
-        (JD.field "keys" (JD.list JD.string)
-            |> JD.map (encodeKeyList prefix)
-        )
-
-
-encodeKeyList : String -> List String -> JE.Value
-encodeKeyList prefix keys =
-    List.map (stripPrefix prefix) keys
-        |> List.map JE.string
-        |> JE.list identity
+        (JD.field "keys" (JD.list JD.string))
