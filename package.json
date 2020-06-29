@@ -2,12 +2,12 @@
   "name": "@the-sett/elm-localstorage",
   "version": "1.0.0",
   "description": "Javascript library to support the the-sett/elm-localstorage package.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/the-sett/elm-localstorage"
   },
+  "main": "src/local-storage.js",
   "scripts": {},
-  "devDependencies": {
-    "jquery": "^3.3.1"
-  }
+  "devDependencies": {}
 }
