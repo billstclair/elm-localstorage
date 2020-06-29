@@ -1,0 +1,15 @@
+{
+  "name": "elm-localstorage",
+  "version": "0.0.1",
+  "description": "UI for demoing the auth module.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-sett/auth-elm"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist",
+  },
+  "devDependencies": {
+    "jquery": "^3.3.1"
+  }
+}
