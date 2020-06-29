@@ -1,138 +1,22 @@
 # elm-localstorage
 
-elm-localstorage provides a simple and minimal API for working with local storage that reflects the underlying browser
-API very closely.
+elm-localstorage provides a simple and minimal API for working with local storage.
 
-As packages with ports cannot be published, the types of the ports are defined instead. It is up to the user of this package in an application to provide the port implementations. A suitable implementation would be:
+# Setting up the javascript side and implementing the Elm ports
 
-```elm
-port module Ports.LocalStoragePort exposing (clear, getItem, setItem, listKeys, response)
+As packages with ports cannot be published, the types of the ports are defined
+instead. It is up to the user of this package in an application to provide the
+port implementations.
 
-import LocalStorage exposing (ClearPort, GetItemPort, SetItemPort, ListKeysPort, ResponsePort)
+Example code for how to do this can be found in this Gist:
 
+https://gist.github.com/rupertlssmith/5c4e3be17830e40d64168f390f4aea24
 
-port getItem : GetItemPort msg
+The javascript code can be copied from this Gist, or it is also available as an
+npm package. To install the npm package do:
 
+    > npm install @the-sett/elm-localstorage
 
-port setItem : SetItemPort msg
-
-
-port clear : ClearPort msg
-
-
-port listKeys : ListKeysPort msg
-
-
-port response : ResponsePort msg
-```
-
-To work with local storage in your Elm application, you need to subscribe to the `ResponsePort` and handle responses in your update code:
-
-```elm
-
-type Msg
-    = LocalStorageOp Operation Key Value
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    LocalStoragePort.response <| LocalStorage.responseHandler LocalStorageOp "somePrefix"
-
-
-update : Msg -> Model -> ( Model, Cmd Msg, Maybe Output )
-update msg model =
-    case msg of
-        LocalStorageOp op key value ->
-            case op of
-                GetItemOperation -> ...
-
-                SetItemOperation -> ...
-
-                ClearOperation -> ...
-
-                ListKeysOperation -> ...
-
-                ErrorOperation -> ...
-```
-
-The javascript side of the ports must also be provided by the user of this package. Here is a short javascript module that implements what is needed on the javascript side:
-
-```
-var ElmLocalStoragePorts = function() {};
-
-ElmLocalStoragePorts.prototype.subscribe =
-  function(app, getPortName, setPortName, clearPortName, receivePortName, listKeysPortName) {
-
-    if (!getPortName) getPortName = "getItem";
-    if (!setPortName) setPortName = "setItem";
-    if (!clearPortName) clearPortName = "clear";
-    if (!receivePortName) receivePortName = "receiveItem";
-    if (!listKeysPortName) listKeysPortName = "listKeys";
-
-    var receivePort = app.ports[receivePortName];
-
-    app.ports[getPortName].subscribe(function(key) {
-      var val = null;
-      try {
-        val = JSON.parse(localStorage.getItem(key))
-      } catch (e) {}
-      receivePort.send({
-        key: key,
-        value: val
-      })
-    });
-
-    app.ports[setPortName].subscribe(function(kv) {
-      var key = kv[0];
-      var json = kv[1];
-      if (json === null) {
-        localStorage.removeItem(key);
-      } else {
-        localStorage.setItem(key, JSON.stringify(json));
-      }
-    });
-
-    app.ports[clearPortName].subscribe(function(prefix) {
-      if (prefix) {
-        var cnt = localStorage.length;
-        for (var i = cnt - 1; i >= 0; --i) {
-          var key = localStorage.key(i);
-          if (key && key.startsWith(prefix)) {
-            localStorage.removeItem(key);
-          }
-        }
-      } else {
-        localStorage.clear();
-      }
-    });
-
-    app.ports[listKeysPortName].subscribe(function(prefix) {
-      var cnt = localStorage.length;
-      var keys = [];
-      for (var i = 0; i < cnt; i++) {
-        var key = localStorage.key(i);
-        if (key && key.startsWith(prefix)) {
-          keys.push(key);
-        }
-      }
-      receivePort.send({
-        prefix: prefix,
-        keys: keys
-      });
-    });
-  };
-
-module.exports.ElmLocalStoragePorts = ElmLocalStoragePorts;
-```
-
-To attach this to an Elm application, this code is used:
-
-```
-const app = Elm.Main.init({node: document.getElementById('main')});
-
-// Subscribe to local storage.
-const localStorage = new LocalStorage();
-localStorage.subscribe(app);
-```
 
 # Origins
 
