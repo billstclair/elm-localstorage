@@ -164,8 +164,8 @@ The operation, key and JSON value message builder combined with the storage
 prefix are needed to create a response handler.
 
 -}
-responseHandler : (Response -> msg) -> String -> JE.Value -> msg
-responseHandler wrapper prefix json =
+responseHandler : (Response -> msg) -> LocalStorage msg -> JE.Value -> msg
+responseHandler wrapper (LocalStorage ( _, prefix )) json =
     case JD.decodeValue (responseDecoder prefix) json of
         Ok resp ->
             wrapper resp
@@ -225,5 +225,5 @@ getItemDecoder prefix =
 
 listKeysDecoder : String -> JD.Decoder Response
 listKeysDecoder prefix =
-    JD.list JD.string
+    JD.list (JD.map (stripPrefix prefix) JD.string)
         |> JD.map KeyList
