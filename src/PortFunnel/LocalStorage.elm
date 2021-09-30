@@ -122,7 +122,7 @@ type Response
 
 {-| An opaque type that represents a message to send to or receive from the JS code.
 
-There are a number of internal messages, but the ones you can use are created by `get`, `put`, `listkeys`, and `clear`.
+There are a number of internal messages, but the ones you can use are created by `get`, `put`, `listkeys`, `clear`, and `useSessionStorage`.
 
 -}
 type alias Message =
