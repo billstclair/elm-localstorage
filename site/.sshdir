@@ -1,1 +1,1 @@
-echo $DO:/var/www/lisplog/localstorage
+echo do:/var/www/lisplog/localstorage
