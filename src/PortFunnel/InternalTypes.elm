@@ -39,6 +39,7 @@ type Message
     | ListKeys Label Prefix
     | Keys Label Prefix (List Key)
     | Clear Prefix
+    | SessionStorage Bool
     | SimulateGet Label Key
     | SimulatePut Key (Maybe Value)
     | SimulateListKeys Label Prefix

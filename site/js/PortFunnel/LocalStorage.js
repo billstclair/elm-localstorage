@@ -11,6 +11,7 @@
 
 (function(scope) {
   var moduleName = 'LocalStorage';
+  var storage = localStorage
   var sub;
 
   function init() {
@@ -38,7 +39,7 @@
       var key = args.key;
       var val = null;
       try {
-        val = JSON.parse(localStorage.getItem(key))
+        val = JSON.parse(storage.getItem(key))
       } catch (e) {
       }
       return { module: moduleName,
@@ -53,11 +54,11 @@
       var json = args.value;
       if (typeof(key) == 'string') {
         if (json === null) {
-          localStorage.removeItem(key);
+          storage.removeItem(key);
         } else {
           var str = JSON.stringify(json);
           if (typeof(str) == 'string') {
-            localStorage.setItem(key, str);
+            storage.setItem(key, str);
           }
         }
       }
@@ -66,9 +67,9 @@
       var prefix = args.prefix;
       var keys = [];
       if (typeof(prefix) == 'string') {
-        var cnt = localStorage.length;
+        var cnt = storage.length;
         for (var i=0; i<cnt; i++) {
-          var key = localStorage.key(i);
+          var key = storage.key(i);
           if (key && key.startsWith(prefix)) {
             keys.push(key);
           }
@@ -85,17 +86,24 @@
       var prefix = args;
       if (prefix) {
         if (typeof(prefix) == 'string') {
-          var cnt = localStorage.length;
+          var cnt = storage.length;
           for (var i=cnt-1; i>=0; --i) {
-            var key = localStorage.key(i);
+            var key = storage.key(i);
             if (key && key.startsWith(prefix)) {
-              localStorage.removeItem(key);
+              storage.removeItem(key);
             }
           }
         }
       } else {
-        localStorage.clear();
+        storage.clear();
       }
-    } 
+    } else if (tag == 'sessionstorage') {
+        var enable = args;
+        if (enable) {
+            storage = sessionStorage
+        } else {
+            storage = localStorage
+        }
+    }
   }
 })(this);   // Execute the enclosing function

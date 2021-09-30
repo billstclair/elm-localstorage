@@ -16,8 +16,8 @@ import Browser
 import Cmd.Extra exposing (addCmd, addCmds, withCmd, withCmds, withNoCmd)
 import Dict exposing (Dict)
 import Html exposing (Html, a, button, div, h2, input, p, span, table, td, text, tr)
-import Html.Attributes exposing (href, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (checked, href, style, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput)
 import Json.Decode as JD
 import Json.Encode as JE exposing (Value)
 import PortFunnel.LocalStorage as LocalStorage
@@ -33,6 +33,7 @@ type alias Model =
     { key : Key
     , value : String
     , label : String
+    , useSessionStorage : Bool
     , returnLabel : String
     , keysString : String
     , useSimulator : Bool
@@ -51,6 +52,7 @@ type Msg
     = SetKey String
     | SetValue String
     | SetLabel String
+    | SetUseSessionStorage Bool
     | GetItem
     | SetItem
     | ListKeys
@@ -75,6 +77,7 @@ init () =
     { key = "key"
     , value = ""
     , label = ""
+    , useSessionStorage = False
     , returnLabel = ""
     , keysString = ""
     , useSimulator = True
@@ -177,6 +180,16 @@ update msg modl =
 
         SetLabel label ->
             { model | label = label } |> withNoCmd
+
+        SetUseSessionStorage enable ->
+            { model | useSessionStorage = enable }
+                |> withCmd
+                    (let
+                        message =
+                            LocalStorage.useSessionStorage enable
+                     in
+                     send message model
+                    )
 
         GetItem ->
             let
@@ -335,6 +348,17 @@ view model =
                         ]
                     ]
                 , tr []
+                    [ td [] [ b "sessionStorage: " ]
+                    , td []
+                        [ input
+                            [ type_ "checkbox"
+                            , checked model.useSessionStorage
+                            , onCheck SetUseSessionStorage
+                            ]
+                            []
+                        ]
+                    ]
+                , tr []
                     [ td [] [ b "Keys:" ]
                     , td []
                         [ text model.keysString ]
@@ -386,6 +410,8 @@ view model =
                 , text "Enter a key and press 'Clear' to remove all key/value pairs beginning with that prefix."
                 , br
                 , text "If you enter a 'Label' for 'Get' or 'List', it will be returned in 'Return Label'"
+                , br
+                , text "Check the \"sessionStorage\" checkbox to use sessionStorage instead of localStorage."
                 ]
             , a [ href "https://github.com/billstclair/elm-localstorage" ]
                 [ text "Source at GitHub" ]

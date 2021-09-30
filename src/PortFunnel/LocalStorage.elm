@@ -15,7 +15,7 @@ module PortFunnel.LocalStorage exposing
     , moduleName, moduleDesc, commander
     , initialState
     , send
-    , get, getLabeled, put, listKeys, listKeysLabeled, clear
+    , get, getLabeled, put, listKeys, listKeysLabeled, clear, useSessionStorage
     , toString, toJsonString
     , makeSimulatedCmdPort
     , isLoaded, getPrefix, encode, decode
@@ -51,7 +51,7 @@ It is a `billstclair/elm-port-funnel` `PortFunnel` funnel.
 The `Message` type is opaque, so there are functions to create the four messages
 you may pass to `send`.
 
-@docs get, getLabeled, put, listKeys, listKeysLabeled, clear
+@docs get, getLabeled, put, listKeys, listKeysLabeled, clear, useSessionStorage
 
 
 # Conversion to Strings
@@ -189,6 +189,20 @@ clear =
     Clear
 
 
+{-| Use `sessionStorage` if the arg is True, or `localStorage` if False.
+
+The default, if you don't send this message, is `localStorage`.
+
+`sessionStorage` is cleared when the browser window is closed.
+
+`localStorage` persists until explicitly cleared.
+
+-}
+useSessionStorage : Bool -> Message
+useSessionStorage enable =
+    SessionStorage enable
+
+
 {-| The initial state.
 
 The `Prefix` arg (plus a period, if non-blank) is prepended to all
@@ -242,6 +256,7 @@ type Tag
     | ListKeysTag
     | KeysTag
     | ClearTag
+    | SessionStorageTag
     | SimulateGetTag
     | SimulatePutTag
     | SimulateListKeysTag
@@ -277,6 +292,10 @@ clearTag =
     "clear"
 
 
+sessionStorageTag =
+    "sessionstorage"
+
+
 simulateGetTag =
     "simulateget"
 
@@ -303,6 +322,7 @@ tagDict =
         , ( listKeysTag, ListKeysTag )
         , ( keysTag, KeysTag )
         , ( clearTag, ClearTag )
+        , ( sessionStorageTag, SessionStorageTag )
         , ( simulateGetTag, SimulateGetTag )
         , ( simulatePutTag, SimulatePutTag )
         , ( simulateListKeysTag, SimulateListKeysTag )
@@ -411,6 +431,9 @@ encode message =
 
         Clear prefix ->
             GenericMessage moduleName clearTag <| JE.string prefix
+
+        SessionStorage enable ->
+            GenericMessage moduleName sessionStorageTag <| JE.bool enable
 
         SimulateGet label key ->
             GenericMessage moduleName simulateGetTag <|
@@ -548,6 +571,14 @@ decode { tag, args } =
 
                 Err _ ->
                     Err <| "Clear prefix not a string: " ++ JE.encode 0 args
+
+        SessionStorageTag ->
+            case JD.decodeValue JD.bool args of
+                Ok enable ->
+                    Ok (SessionStorage enable)
+
+                Err _ ->
+                    Err <| "SessionStorage enable not a bool." ++ JE.encode 0 args
 
         StartupTag ->
             Ok Startup
@@ -820,6 +851,17 @@ toString message =
 
         Clear prefix ->
             "<Clear \"" ++ prefix ++ "\""
+
+        SessionStorage enable ->
+            let
+                enableStr =
+                    if enable then
+                        "True"
+
+                    else
+                        "False"
+            in
+            "<SessionStorage " ++ enableStr ++ ">"
 
         SimulateGet label key ->
             "<SimulateGet " ++ labelToString label ++ " \"" ++ key ++ "\""
